@@ -2,25 +2,32 @@
   "name": "typecheck",
   "private": false,
   "version": "1.0.0",
-  "description": "Typecheck — minimalist, private, open-source typing test. Practice, race & compete. No login, 100% local.",
-  "author": "Typecheck <hello@typecheck.test>",
+  "description": "Type faster. Race anyone. The open-source typing test that lives in your browser.",
+  "author": {
+    "name": "Sarthak Krishak",
+    "url": "https://github.com/SarthakKrishak"
+  },
   "license": "MIT",
   "keywords": [
-    "typing",
+    "typing-test",
     "wpm",
     "touch-typing",
+    "typing-speed",
     "open-source",
-    "saas",
+    "react",
+    "typescript",
     "race",
-    "practice"
+    "keyboard",
+    "mechanical-keyboard",
+    "pwa"
   ],
-  "homepage": "https://typecheck.test",
+  "homepage": "https://github.com/SarthakKrishak/Typecraft#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/SarthakKrishak/Typecheck.git"
+    "url": "git+https://github.com/SarthakKrishak/Typecraft.git"
   },
   "bugs": {
-    "url": "https://github.com/SarthakKrishak/Typecheck/issues"
+    "url": "https://github.com/SarthakKrishak/Typecraft/issues"
   },
   "type": "module",
   "scripts": {
@@ -29,6 +36,9 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "dependencies": {
     "framer-motion": "^13.1.1",

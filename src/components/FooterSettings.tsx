@@ -264,7 +264,7 @@ export function FooterSettings() {
       </div>
 
       <div className="mt-6 text-[11px] leading-relaxed text-center" style={{ color: "var(--text-dim)" }}>
-        <span className="font-medium" style={{ color: "var(--text-strong)" }}>typecheck</span> — minimal, private, fast. No ads. Data stays in your browser.
+        <span className="font-medium" style={{ color: "var(--text-strong)" }}>typecheck</span> — open source. Free forever. Built for speed.
       </div>
     </div>
   );

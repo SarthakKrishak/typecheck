@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type Theme = "dark" | "light" | "midnight" | "forest" | "rose";
+export type Theme = "graphite" | "dark" | "light" | "midnight" | "forest" | "rose";
 export type CaretStyle = "line" | "block" | "underline";
 export type TestMode = "time" | "words" | "quote" | "zen" | "custom";
 export type Language = "english" | "code";
@@ -46,7 +46,7 @@ type SettingsState = {
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
-      theme: "dark",
+      theme: "graphite",
       caretStyle: "line",
       blindMode: false,
       stopOnWord: false,
@@ -82,24 +82,14 @@ export const useSettingsStore = create<SettingsState>()(
       setGhostWpm: (ghostWpm) => set({ ghostWpm }),
     }),
     {
-      name: "typing-settings-v8",
+      name: "typing-settings-v9",
       migrate: (persisted: unknown) => {
         const p = persisted as Partial<SettingsState> & Record<string, unknown>;
-        if (p.soundKeys === undefined) p.soundKeys = false;
-        if (p.soundWords === undefined) p.soundWords = false;
-        if (p.adaptive === undefined) p.adaptive = false;
-        if (p.focusMode === undefined) p.focusMode = false;
-        if (p.dyslexia === undefined) p.dyslexia = false;
-        if (p.highContrast === undefined) p.highContrast = false;
-        if (p.breathing === undefined) p.breathing = false;
-        if ((p as Record<string, unknown>).ghost === undefined) (p as Record<string, unknown>).ghost = false;
-        if ((p as Record<string, unknown>).ghostWpm === undefined) (p as Record<string, unknown>).ghostWpm = 0;
-        if ((p as Record<string, unknown>).handGuide === undefined) (p as Record<string, unknown>).handGuide = false;
-        if ((p as Record<string, unknown>).rhythm === undefined) (p as Record<string, unknown>).rhythm = false;
-        if (p.soundOnClick === undefined) p.soundOnClick = false;
+        // v9: default theme changed from dark → graphite
+        if (!p.theme || p.theme === "dark") p.theme = "graphite";
         return p as SettingsState;
       },
-      version: 8,
+      version: 9,
     }
   )
 );

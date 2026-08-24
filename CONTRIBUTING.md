@@ -1,35 +1,48 @@
-# Contributing to Typecheck
+# Contributing to typecheck
 
-Thanks for considering contributing — Typecheck is MIT, 100% local, no tracking.
+Thanks for your interest in contributing. typecheck is MIT-licensed and 100% local — no backend, no tracking.
 
-## Quick Start
+## Setup
 
 ```bash
+git clone https://github.com/SarthakKrishak/Typecraft.git
+cd Typecraft
 npm install
-npm run dev      # http://localhost:5173
-npm run lint     # oxlint
-npm run build    # tsc -b && vite build
+npm run dev
 ```
 
-## Ground Rules
-- **No backend:** keep `localStorage` only (`typing-settings-v7`, `typing-history-v2`). No `fetch` to external APIs except `fonts.googleapis.com` and `fetch` for GitHub raw (opt-in).
-- **Design tokens:** `Instrument Sans / Geist Mono`, `--bg #0A0A0B`, `--primary #5E6AD2`, `panel 10px` — see `src/index.css`.
-- **A11y:** `kbd` for shortcuts, `aria-label="typing input"`, `focus-visible` required.
-- **Performance:** `chunkSizeWarningLimit 800`, `manualChunks: vendor` already in `vite.config.ts`.
+## Before submitting a PR
 
-## Pull Request
-1. Fork → branch `feat/your-feature`
-2. `npm run lint` passes, `npm run build` passes
-3. Describe **why** not just **what** — no forceful gamification.
-4. Add to `README` features table if user-facing.
+```bash
+npm run lint       # oxlint
+npm run typecheck  # tsc --noEmit
+npm run build      # tsc -b && vite build
+```
 
-## Good First Issues
-- More `code` language keywords in `TypingArea.getTokenStyle`
-- Additional `QWERTY` finger heatmap languages
-- `Race` assignment: support `.txt` upload
+All three must pass.
 
-## Code of Conduct
-See `CODE_OF_CONDUCT.md`. Be kind, no harassment.
+## Ground rules
 
-## Security
-See `SECURITY.md` — email `hello@typecheck.test` for sensitive reports, not public issues.
+- **No backend** — everything runs locally. No `fetch` to external APIs except Google Fonts and opt-in GitHub raw file fetch.
+- **Design tokens** — use CSS custom properties from `src/index.css`. Don't hardcode colors.
+- **A11y** — interactive elements need focus states. Use the `Tooltip` component instead of `title` attributes.
+- **Performance** — avoid unnecessary re-renders. Use `React.memo` for list items.
+- **No tracking** — no analytics, no telemetry, no phone-home.
+
+## Code style
+
+- Functional components with hooks
+- Zustand stores with `persist` middleware
+- CSS custom properties for theming (no inline hex values)
+- `kbd` component for keyboard shortcuts
+
+## Good first issues
+
+- Add more code language keywords to `TypingArea.getTokenStyle`
+- Add more quotes to `src/data/quotes.ts`
+- Improve mobile responsiveness of the race mode
+- Add more themes
+
+## Questions
+
+Open a [Discussion](https://github.com/SarthakKrishak/Typecraft/discussions) or reach out on X.

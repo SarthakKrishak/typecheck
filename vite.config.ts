@@ -10,11 +10,11 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg", "sounds/*.wav"],
       manifest: {
-        name: "Typecheck — Typing Test",
+        name: "Typecheck — Type faster. Race anyone.",
         short_name: "Typecheck",
-        description: "Minimalist, private typing test. Practice, race & compete. No login, 100% local.",
-        theme_color: "#0A0A0B",
-        background_color: "#0A0A0B",
+        description: "The open-source typing test. Measure your speed, race friends, track progress.",
+        theme_color: "#19191B",
+        background_color: "#19191B",
         display: "standalone",
         start_url: "/",
         icons: [

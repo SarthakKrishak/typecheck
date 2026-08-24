@@ -1,86 +1,109 @@
-# Typecheck — Minimalist, Private Typing Test
+# typecheck
 
-[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Vite](https://img.shields.io/badge/vite-8.x-646CFF.svg)](https://vitejs.dev) [![React 19](https://img.shields.io/badge/react-19-61DAFB.svg)](https://react.dev) [![Open Source](https://img.shields.io/badge/open%20source-100%25-brightgreen.svg)](#) [![No Login](https://img.shields.io/badge/no%20login-100%25%20local-informational.svg)](#)
+<p align="center">
+  <strong>Type faster. Race anyone.</strong><br/>
+  The open-source typing test that lives in your browser.
+</p>
 
-> **Practice, race & compete — 100% local, no ads, no tracking. Your data never leaves your browser.**
-
-![Typecheck Hero](public/favicon.svg)
-
-**Live demo:** `https://typecheck.test` (or `npm run dev` → `http://localhost:5173`)
-
----
-
-## Why Typecheck?
-
-**I recommend open-sourcing this — here’s why, as requested:**
-
-- **Trust:** Typing data is sensitive. Open source + `localStorage only` (`Privacy-first · No cookies · Local storage only` in footer) lets anyone audit `src/store/useSettingsStore.ts:36` + `useHistoryStore.ts:13` — no backend.
-- **Growth:** Monkeytype clones grow via community themes, word lists, code modes. Your `Race (free/private + limit/passcode + BroadcastChannel)` and `Weak-Key Coach` are unique — contributors will amplify.
-- **Moat:** Keep core **MIT**, add `PRO` badge as *cosmetic* (no paywall). Monetize later via **hosted teams** (`typecheck.test/teams`) without closing core.
-
-**If you keep it closed:** you pay for trust. If open: you gain distribution. For a typing test, distribution > secrecy.
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"/></a>
+  <a href="https://github.com/SarthakKrishak/Typecraft"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"/></a>
+  <a href="https://react.dev"><img src="https://img.shields.io/badge/React-19-61DAFB.svg" alt="React 19"/></a>
+  <a href="https://vite.dev"><img src="https://img.shields.io/badge/Vite-8-646CFF.svg" alt="Vite 8"/></a>
+  <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-strict-3178C6.svg" alt="TypeScript strict"/></a>
+</p>
 
 ---
 
-## Features (all local, no login)
+Typecheck is a minimalist, open-source typing test. No login, no ads, no tracking — everything runs locally in your browser and your data never leaves your device.
 
-| Area | What’s inside |
-|---|---|
-| **Test** | `time (15/30/60/120)`, `words (10/25/50/100)`, `quote`, `zen`, `custom` + `GitHub paste` (`TypingArea.tsx:53` syntax-aware `getTokenStyle`), `english/code`, `punctuation/numbers`, `blind/stopOnWord`, `caret line/block/underline`, `font 16–36`, `sound mechanical + chime` (split toggles) |
-| **Engine** | `WPM = (correct/5)/(min)`, `raw`, `accuracy`, `consistency`, `burst`, `charErrorMap/bigramErrorMap` (`stats.ts:22`, `TypingArea.tsx:162`) |
-| **Weak-Key Coach** | Finger heatmap `QWERTY` + `Top 3 keys/bigrams`, `Drill 25` (`WeakKeyCoach.tsx:51`) → injects into next test |
-| **Adaptive Lab** | Auto `words 10↔50` / `time 15↔60` + `punct` when `accuracy <92` or `>97` ×3 (`App.tsx:45`) |
-| **Focus/Calm/A11y** | `Focus` (dims chrome, `Esc`/`Exit Focus` floating `data-focus-exit`), `Dyslexia Lexend`, `High-contrast`, `Breathing bar 8s` (`index.css:113`) |
-| **Sound** | Real `public/sounds/mech-key.wav` thock `88Hz` + click `0.42` vol, correct `A-major` pop — `HTMLAudio` + `AudioBuffer` pre-warmed, `⌘/Ctrl+S`, header dropdown `Mechanical keys` / `Correct word chime` individually |
-| **Race** | `Free` (visible, owner sets `limit 2/4/8/16/32`) + `Private` (visible but `🔒` needs `passcode`) — both visible, limit shown. `BroadcastChannel race-${id}`, `3-2-1` countdown, live WPM/progress, `Copy link (?race=CODE)`, `Assignment` textarea for classroom, `Export race CSV` |
-| **Analytics** | `Avg/Best/Accuracy/Consistency` + `WPM trend 20` + `Last run sparkline` + `Finger & Bigram Deep Analytics` (`App.tsx:190`) + table `30` rows, `best` highlight `bg-highlight` |
-| **History** | `200` results `localStorage typing-history-v2`, `Export CSV/JSON`, `Import JSON`, `Clear`, `Vocabulary Deck` 30% inject (`useDeckStore.ts`) |
-| **PWA** | `vite-plugin-pwa` `autoUpdate`, `manifest` `Typecheck`, `workbox` fonts+ `sounds/*.wav` cached, `theme-color` |
-| **A11y/SEO** | `lang, meta, OG, twitter, JSON-LD`, `kbd` styles, `focus-visible`, `aria-label="typing input"` |
+## Features
 
-Directly usable — open the URL and type. No account. Data in `localStorage` only (`typing-settings-v7`, `typing-history-v2`, `typecraft_deck_v1`, `typecraft_race_rooms_v1`, `typecraft_name`).
-
----
+- **5 test modes** — Time (15/30/60/120s), Words (10/25/50/100), Quote, Zen, Custom
+- **Race mode** — public and private rooms with passcodes, real-time cross-tab sync
+- **Analytics** — WPM trend, per-second speed chart, keyboard error heatmap, finger-level breakdown
+- **Weak-key coach** — identifies your weakest keys and bigrams, generates targeted drills
+- **Smart sentences** — auto-generates practice sentences packed with your weak patterns
+- **Replay theater** — scrub through any past test keystroke-by-keystroke
+- **Daily challenge** — same seeded words worldwide, local streak tracking
+- **FUT card** — FIFA-style season card with your stats, downloadable as PNG
+- **Mechanical sound** — pre-warmed WebAudio, key thocks and word chimes, individually toggleable
+- **Ghost pace** — race against your best run, keystroke-for-keystroke
+- **Adaptive difficulty** — auto-adjusts length and complexity based on accuracy
+- **Accessibility** — dyslexia font, high-contrast mode, focus mode, breathing bar
+- **Vocabulary deck** — save weak words, auto-inject 30% into future tests
+- **PWA** — installable, works offline
+- **5 themes** — Graphite (default), Ink, Paper, Midnight, Forest, Rose
 
 ## Quick Start
 
 ```bash
+git clone https://github.com/SarthakKrishak/Typecraft.git
+cd Typecraft
 npm install
-npm run dev      # http://localhost:5173
-npm run build    # tsc -b && vite build → dist/
-npm run preview
-npm run lint     # oxlint
+npm run dev
 ```
 
-**Keyboard:** `Tab+Enter` / `Enter` restart, `Space` focus/start, `Ctrl/Cmd+Backspace` clear word, `Ctrl/Cmd+S` sound, `Ctrl/Cmd+J` next theme, `Ctrl/Cmd+R` Race, `Ctrl/Cmd+E` Analytics, `?` / `Ctrl+/` shortcuts, `Esc` quit Focus/Tour.
+Open [http://localhost:5173](http://localhost:5173) and start typing.
 
----
+## Scripts
 
-## Open Source Promotion (if you launch tomorrow)
+| Command | Description |
+|---|---|
+| `npm run dev` | Start dev server |
+| `npm run build` | Type-check + production build |
+| `npm run preview` | Preview production build |
+| `npm run lint` | Run oxlint |
+| `npm run typecheck` | TypeScript only (no emit) |
 
-**Ready to launch checklist already in repo:**
-- `LICENSE` MIT, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `.github/ISSUE_TEMPLATE/*`, `.github/pull_request_template.md`
-- `README` badges, `manifest.webmanifest`, `og-image.png` placeholder, `sitemap` via `vite build`
-- `Privacy-first` footer, `No cookies` — good for Product Hunt / Hacker News “Show HN”
+## Keyboard Shortcuts
 
-**To promote (agree):**
-1. **GitHub:** push to `SarthakKrishak/Typecheck` → enable `Discussions`, `Sponsor` button, pin `Race` demo GIF.
-2. **Product Hunt:** `Typecheck — The typing test that stays local` — tag `Privacy`, `Developer Tools`.
-3. **Hacker News:** `Show HN: Typecheck — I built a Monkeytype alternative that never sends keystrokes to a server`.
-4. **Twitter/Reddit r/typing:** short video of `Ghost` + `Race` + `Weak-Key heatmap`.
+| Shortcut | Action |
+|---|---|
+| `Ctrl/⌘ + Enter` | Restart test |
+| `Tab + Enter` | Restart (alternate) |
+| `Ctrl/⌘ + Backspace` | Clear current word |
+| `Backspace` (at word start) | Edit previous word |
+| `Ctrl/⌘ + S` | Toggle sound |
+| `Ctrl/⌘ + J` | Cycle theme |
+| `Ctrl/⌘ + R` | Go to Race |
+| `Ctrl/⌘ + E` | Go to Analytics |
+| `Ctrl/⌘ + /` | Shortcuts panel |
+| `Esc` | Close / unfocus |
 
-I **agree** with open source — for typing, **trust is the feature**. Keep it MIT for launch; you can dual-license `PRO` later.
+## Tech Stack
 
----
+- **React 19** + **TypeScript 6** (strict)
+- **Vite 8** with PWA plugin (Workbox)
+- **Tailwind CSS 4** + CSS custom properties
+- **Zustand** with localStorage persistence
+- **Recharts** for analytics graphs
+- **Web Audio API** for mechanical keyboard sounds
+
+## How Calculations Work
+
+| Metric | Formula |
+|---|---|
+| **WPM** | `(correct characters ÷ 5) ÷ (time ÷ 60)` |
+| **Raw WPM** | `(all typed characters ÷ 5) ÷ (time ÷ 60)` |
+| **Accuracy** | `correct ÷ (correct + incorrect + extra + missed) × 100` |
+| **Consistency** | `(1 − std-dev ÷ mean) × 100` of per-second WPM |
+| **Burst** | `max(single-second WPM)` |
+
+All calculations run locally. No data is sent anywhere.
+
+## Privacy
+
+Typecheck stores everything in your browser's `localStorage`. There are no cookies, no server calls, no analytics, no account system. Close the tab and your data stays. Clear your browser data and it's gone.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). `npm run lint` before PR. `typecheck` uses `Instrument Sans / Geist Mono / Lexend` and `Linear`-inspired tokens (`--bg #0A0A0B`, `--primary #5E6AD2`).
+See [CONTRIBUTING.md](CONTRIBUTING.md). PRs welcome — please run `npm run lint` and `npm run build` before submitting.
 
 ## Security
 
-See [SECURITY.md](SECURITY.md). No data leaves browser — report via `hello@typecheck.test`.
+See [SECURITY.md](SECURITY.md).
 
 ## License
 
-MIT © 2026 Typecheck — see [LICENSE](LICENSE).
+[MIT](LICENSE) © [Sarthak Krishak](https://github.com/SarthakKrishak)

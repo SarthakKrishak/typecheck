@@ -190,7 +190,7 @@ export default function App() {
                 <span className="text-[14px] font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>typecheck</span>
               </div>
               <p className="text-[12px] mt-3 leading-relaxed" style={{ color: "var(--text-dim)" }}>
-                Minimalist typing test. Practice, race & compete — 100% local, no login, no tracking.
+                Type faster. Race anyone. Own your numbers.
               </p>
               <div className="flex items-center gap-2 mt-4">
                 <span className="text-[10px] font-semibold tracking-wide px-2 py-0.5 rounded border" style={{ background: "var(--bg-muted)", borderColor: "var(--border)", color: "var(--text-dim)" }}>MIT</span>
@@ -223,11 +223,11 @@ export default function App() {
                 </div>
               </div>
               <div>
-                <div className="text-[10px] font-semibold tracking-widest uppercase mb-3" style={{ color: "var(--text-faint)" }}>Legal</div>
+                <div className="text-[10px] font-semibold tracking-widest uppercase mb-3" style={{ color: "var(--text-faint)" }}>Why typecheck</div>
                 <div className="space-y-2">
-                  <span className="block text-[12px]" style={{ color: "var(--text-dim)" }}>No cookies</span>
-                  <span className="block text-[12px]" style={{ color: "var(--text-dim)" }}>No tracking</span>
-                  <span className="block text-[12px]" style={{ color: "var(--text-dim)" }}>Data stays local</span>
+                  <span className="block text-[12px]" style={{ color: "var(--text-dim)" }}>Free forever</span>
+                  <span className="block text-[12px]" style={{ color: "var(--text-dim)" }}>Open source</span>
+                  <span className="block text-[12px]" style={{ color: "var(--text-dim)" }}>Works offline</span>
                 </div>
               </div>
               <div>
@@ -247,7 +247,7 @@ export default function App() {
               <span className="font-mono" style={{ color: "var(--text-faint)" }}>© 2026</span>
               <a href="https://github.com/SarthakKrishak" target="_blank" rel="noreferrer" className="font-medium hover:underline" style={{ color: "var(--text-strong)" }}>Sarthak Krishak</a>
               <span style={{ color: "var(--border-strong)" }}>·</span>
-              <span>Built with obsession</span>
+              <span>Built for speed</span>
             </div>
             <div className="flex items-center gap-4 text-[11px] font-mono" style={{ color: "var(--text-faint)" }}>
               <span className="hidden sm:inline-flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full" style={{ background: "#22C55E" }} /> Operational</span>
@@ -272,6 +272,7 @@ function AnalyticsView({ history }: { history: Result[] }) {
   const replayable = history.filter((r) => r.replay && r.replay.length > 4);
   const [theaterOpen, setTheaterOpen] = useState(false);
   const [theaterRun, setReplayRunLocal] = useState<Result | null>(null);
+  const [showCalc, setShowCalc] = useState(false);
 
   // data for trend (last 20 runs)
   const trend = history.slice(0, 20).reverse().map((r, i) => ({ idx: i + 1, wpm: r.wpm, raw: r.rawWpm, acc: r.accuracy }));
@@ -534,6 +535,40 @@ function AnalyticsView({ history }: { history: Result[] }) {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* How we calculate */}
+      <div className="panel overflow-hidden">
+        <button
+          onClick={() => setShowCalc((v) => !v)}
+          className="w-full px-4 py-3 flex items-center justify-between hover:bg-[var(--bg-hover)] transition-colors"
+          style={{ background: "var(--bg-subtle)" }}
+        >
+          <span className="text-[11px] font-semibold tracking-widest uppercase" style={{ color: "var(--text-dim)" }}>How we calculate</span>
+          <span className="text-[10px] transition-transform" style={{ color: "var(--text-faint)", transform: showCalc ? "rotate(180deg)" : "none" }}>▾</span>
+        </button>
+        {showCalc && (
+          <div className="px-4 py-4 space-y-3 text-[12px] leading-relaxed">
+            {[
+              ["WPM", "(correct characters ÷ 5) ÷ (time in seconds ÷ 60)", "Counts only correctly typed characters, including spaces between correct words. This is the industry-standard net WPM — same formula Monkeytype and 10FastFingers use."],
+              ["Raw WPM", "(all typed characters ÷ 5) ÷ (time in seconds ÷ 60)", "Counts every character you typed, including incorrect ones. The gap between WPM and Raw shows how much speed you lose to errors."],
+              ["Accuracy", "correct ÷ (correct + incorrect + extra + missed) × 100", "Missed characters (skipped words) count against you. Extra characters you typed beyond the target also reduce accuracy."],
+              ["Consistency", "(1 − std-dev ÷ mean) × 100 of per-second WPM", "Measures how even your speed was. A score of 90%+ means you type at a very steady pace. Zero-speed seconds (before you start) are excluded."],
+              ["Burst", "highest single-second WPM", "Your fastest moment during the test. Compare it to your average — a big gap means you sprint and stall."],
+            ].map(([name, formula, desc]) => (
+              <div key={name} className="flex gap-3">
+                <span className="font-mono font-semibold text-[12px] w-20 shrink-0 pt-0.5" style={{ color: "var(--accent-light)" }}>{name}</span>
+                <div>
+                  <code className="text-[11px] px-1.5 py-0.5 rounded-[3px] block mb-0.5" style={{ background: "var(--bg-muted)", color: "var(--text-strong)" }}>{formula}</code>
+                  <span className="text-[11px]" style={{ color: "var(--text-dim)" }}>{desc}</span>
+                </div>
+              </div>
+            ))}
+            <div className="pt-2 border-t text-[11px]" style={{ borderColor: "var(--border)", color: "var(--text-faint)" }}>
+              All calculations run locally in your browser. No data is sent anywhere.
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

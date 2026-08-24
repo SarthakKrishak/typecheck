@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "../store/useSettingsStore";
 import { useHistoryStore } from "../store/useHistoryStore";
 import { playMechanical, playCorrectWord } from "../lib/sound";
+import { Tooltip } from "./Tooltip";
 
 const THEMES = [
+  { id: "graphite", label: "Graphite", bg: "#19191B", border: "#2E2E32", dot: "#5E6AD2" },
   { id: "dark", label: "Ink", bg: "#0B0B0D", border: "#1E1E22", dot: "#5E6AD2" },
   { id: "light", label: "Paper", bg: "#FAFAFA", border: "#E4E4E7", dot: "#5E6AD2" },
   { id: "midnight", label: "Midnight", bg: "#050A14", border: "#162040", dot: "#3B82F6" },
@@ -17,11 +19,19 @@ export function Header({ onLogoClick, activeView, onViewChange, onTour }: { onLo
   const [themeOpen, setThemeOpen] = useState(false);
   const [soundOpen, setSoundOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [stars, setStars] = useState<number | null>(null);
   const themeRef = useRef<HTMLDivElement>(null);
   const soundRef = useRef<HTMLDivElement>(null);
   const current = THEMES.find((t) => t.id === theme) ?? THEMES[0];
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
   const mod = isMac ? "⌘" : "Ctrl";
+
+  useEffect(() => {
+    fetch("https://api.github.com/repos/SarthakKrishak/Typecraft")
+      .then((r) => r.json())
+      .then((d) => { if (d.stargazers_count !== undefined) setStars(d.stargazers_count); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const close = (e: MouseEvent) => {
@@ -70,9 +80,11 @@ export function Header({ onLogoClick, activeView, onViewChange, onTour }: { onLo
 
           {/* Best WPM badge */}
           {best > 0 && (
-            <span className="hidden lg:inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] text-[11px] font-mono font-semibold shrink-0" style={{ background: "var(--primary-soft)", border: "1px solid var(--primary-border)", color: "var(--accent-light)" }} title="Your personal best WPM">
-              {best} <span className="text-[9px] font-sans font-medium" style={{ color: "var(--text-dim)" }}>best</span>
-            </span>
+            <Tooltip content="Your personal best words-per-minute across all completed tests">
+              <span className="hidden lg:inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] text-[11px] font-mono font-semibold cursor-default" style={{ background: "var(--primary-soft)", border: "1px solid var(--primary-border)", color: "var(--accent-light)" }}>
+                {best} <span className="text-[9px] font-sans font-medium" style={{ color: "var(--text-dim)" }}>best</span>
+              </span>
+            </Tooltip>
           )}
         </div>
 
@@ -148,7 +160,9 @@ export function Header({ onLogoClick, activeView, onViewChange, onTour }: { onLo
           )}
 
           {/* Help */}
-          <button onClick={() => setHelpOpen((v) => !v)} title="Keyboard shortcuts" className="w-6 h-6 rounded-[4px] flex items-center justify-center text-[10px] font-mono border" style={{ background: "transparent", borderColor: "var(--border)", color: "var(--text-dim)" }}>?</button>
+          <Tooltip content="Keyboard shortcuts">
+            <button onClick={() => setHelpOpen((v) => !v)} className="w-6 h-6 rounded-[4px] flex items-center justify-center text-[10px] font-mono border" style={{ background: "transparent", borderColor: "var(--border)", color: "var(--text-dim)" }}>?</button>
+          </Tooltip>
 
           {/* GitHub Star */}
           <a
@@ -157,10 +171,12 @@ export function Header({ onLogoClick, activeView, onViewChange, onTour }: { onLo
             rel="noreferrer"
             className="hidden sm:inline-flex h-6 px-2.5 rounded-[4px] items-center gap-1.5 text-[11px] font-medium border ml-1"
             style={{ background: "var(--bg-card)", borderColor: "var(--border-strong)", color: "var(--text-strong)" }}
-            title="Star typecheck on GitHub"
           >
             <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
             Star
+            {stars !== null && (
+              <span className="text-[10px] font-mono px-1 py-px rounded-[3px]" style={{ background: "var(--bg-muted)", color: "var(--text-dim)" }}>{stars >= 1000 ? `${(stars / 1000).toFixed(1)}k` : stars}</span>
+            )}
           </a>
         </div>
 

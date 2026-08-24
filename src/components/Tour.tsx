@@ -4,20 +4,20 @@ type Step = {
   id: string;
   title: string;
   desc: string;
-  target?: string; // selector
+  target?: string;
   placement?: "bottom" | "top" | "center";
 };
 
 const STEPS: Step[] = [
-  { id: "welcome", title: "Welcome to typecraft", desc: "Minimal, private, fast — no login. Everything stays in your browser (localStorage). Let’s take a 30s tour. You can replay anytime from Help (?)", placement: "center" },
-  { id: "header", title: "Header & Navigation", desc: "Switch Test • Race • Analytics • History. Theme and sound are here. Press ? for shortcuts (works on Win Ctrl and Mac ⌘).", target: "[data-tour='header']" },
-  { id: "test-config", title: "Test controls", desc: "Pick mode Time / Words / Quote / Zen / Custom and length. English / Code, Punctuation, Numbers — all instantly local.", target: "[data-tour='test-config']" },
-  { id: "typing-area", title: "Typing canvas", desc: "Your words appear here. Correct is bright, incorrect is red. Caps Lock warns live. Tab+Enter restarts. Ctrl+Backspace clears a word.", target: "[data-tour='typing-area']" },
-  { id: "sound", title: "Mechanical sound", desc: "By default sound is OFF. Click the speaker in the header for a dropdown — toggle Mechanical keys and Correct-word chime separately. Zero-latency, pre-warmed.", target: "[data-tour='sound']" },
-  { id: "theme", title: "Themes", desc: "Ink (default), Paper, Midnight, Forest, Rose — each with a live preview. Cycle with ⌘+J / Ctrl+J. Fonts and caret live in Preferences below.", target: "[data-tour='theme']" },
-  { id: "race", title: "Race — Free & Private rooms", desc: "Create a free lobby or a private room (6-char code). Share the link (?race=CODE) — friends opening it in another tab race live via BroadcastChannel. No server.", target: "[data-tour='race']" },
-  { id: "analytics", title: "Analytics & History", desc: "WPM trend, last-run sparkline, and a readable table (WPM/Raw/Acc/Time/Mode). Export CSV/JSON, clear, or keep 200 runs locally.", target: "[data-tour='analytics']" },
-  { id: "prefs", title: "Preferences — all local", desc: "Caret, font size, blind/strict, sound toggles, custom text — all saved to localStorage (typing-settings-v4). No cookies, no account.", target: "[data-tour='prefs']" },
+  { id: "welcome", title: "Welcome to typecheck", desc: "Minimal, private, fast — no login. Everything stays in your browser. Let's take a quick tour. You can replay anytime from the Tour button.", placement: "center" },
+  { id: "header", title: "Navigation", desc: "Switch between Test, Race, and Analytics. Sound and theme controls are on the right. Press ? for keyboard shortcuts.", target: "[data-tour='header']" },
+  { id: "test-config", title: "Test controls", desc: "Pick a mode — Time, Words, Quote, Zen, or Custom — and set the length. Toggle punctuation and numbers for extra challenge.", target: "[data-tour='test-config']" },
+  { id: "typing-area", title: "Typing canvas", desc: "Start typing to begin. Correct characters light up, errors show in red. Tab+Enter restarts. Ctrl+Backspace clears a word.", target: "[data-tour='typing-area']" },
+  { id: "sound", title: "Mechanical sound", desc: "Sound is off by default. Click the speaker to enable mechanical key thocks and a chime for perfect words — each toggleable separately.", target: "[data-tour='sound']" },
+  { id: "theme", title: "Themes", desc: "Five themes with live previews. Cycle with the shortcut. Font size, caret style, and accessibility options live in Preferences below.", target: "[data-tour='theme']" },
+  { id: "race", title: "Race mode", desc: "Create public or private rooms. Private rooms need a passcode. Share the link — friends open it in another tab and race in real time.", target: "[data-tour='race']" },
+  { id: "analytics", title: "Analytics", desc: "WPM trend, per-second speed chart, keyboard error heatmap, and finger-level breakdown. Export everything as CSV.", target: "[data-tour='analytics']" },
+  { id: "prefs", title: "Preferences", desc: "Caret style, font size, sound toggles, blind mode, adaptive difficulty — all saved locally. No account needed.", target: "[data-tour='prefs']" },
 ];
 
 export function Tour({ open, onClose, onNavigate }: { open: boolean; onClose: () => void; onNavigate?: (v: string) => void }) {
@@ -32,7 +32,6 @@ export function Tour({ open, onClose, onNavigate }: { open: boolean; onClose: ()
     if (!el) { setRect(null); return; }
     const r = el.getBoundingClientRect();
     setRect(r);
-    // zoom effect
     el.style.transition = "transform 280ms cubic-bezier(0.2,0,0,1), box-shadow 280ms ease";
     el.style.transform = "scale(1.015)";
     el.style.boxShadow = "0 0 0 2px var(--primary), var(--shadow-lg)";
@@ -45,7 +44,6 @@ export function Tour({ open, onClose, onNavigate }: { open: boolean; onClose: ()
     };
   };
 
-  // auto-navigate to make target visible for race/analytics/prefs
   useEffect(() => {
     if (!open) return;
     if (step.id === "race") onNavigate?.("race");
@@ -54,16 +52,13 @@ export function Tour({ open, onClose, onNavigate }: { open: boolean; onClose: ()
     if (step.id === "prefs") setTimeout(() => document.getElementById("footer-settings")?.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
   }, [idx, open, step.id, onNavigate]);
 
-  // cleanup previous zoom on step change
   useLayoutEffect(() => {
-    // remove zooms from all
     document.querySelectorAll("[data-tour]").forEach((el) => {
       (el as HTMLElement).style.transform = "";
       (el as HTMLElement).style.boxShadow = "";
       (el as HTMLElement).style.zIndex = "";
     });
     if (!open) return;
-    // small delay to let view switch render before measuring
     const t = setTimeout(() => updateRect(), 80);
     const onResize = () => updateRect();
     window.addEventListener("resize", onResize);
@@ -72,7 +67,6 @@ export function Tour({ open, onClose, onNavigate }: { open: boolean; onClose: ()
       clearTimeout(t);
       window.removeEventListener("resize", onResize);
       window.removeEventListener("scroll", onResize, true);
-      // also ensure cleanup
       document.querySelectorAll("[data-tour]").forEach((el) => {
         (el as HTMLElement).style.transform = "";
         (el as HTMLElement).style.boxShadow = "";
@@ -92,7 +86,7 @@ export function Tour({ open, onClose, onNavigate }: { open: boolean; onClose: ()
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
-      {/* dim — only backdrop when centered (no target), otherwise spotlight provides dim with a clear hole so site stays sharp */}
+      {/* dim backdrop — no blur */}
       {isCenter ? (
         <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.42)" }} onClick={onClose} />
       ) : (
@@ -108,8 +102,8 @@ export function Tour({ open, onClose, onNavigate }: { open: boolean; onClose: ()
             top: rect.top - 8,
             width: rect.width + 16,
             height: rect.height + 16,
-            borderRadius: 12,
-            boxShadow: "0 0 0 9999px rgba(0,0,0,0.55), 0 0 0 2px var(--primary), var(--shadow-lg)",
+            borderRadius: 8,
+            boxShadow: "0 0 0 9999px rgba(0,0,0,0.55), 0 0 0 2px var(--primary)",
             border: "1px solid color-mix(in srgb, var(--primary) 40%, transparent)",
           }}
         />
@@ -118,37 +112,30 @@ export function Tour({ open, onClose, onNavigate }: { open: boolean; onClose: ()
       {/* card */}
       <div
         ref={cardRef}
-        className="relative w-full max-w-[420px] mx-4 rounded-xl border overflow-hidden animate-[fadeIn_0.2s_ease]"
-        style={{ background: "var(--bg-surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-lg)" }}
+        className="relative w-full max-w-[400px] mx-4 rounded-lg border overflow-hidden animate-[fadeIn_0.15s_ease]"
+        style={{ background: "var(--bg-surface)", borderColor: "var(--border-strong)", boxShadow: "var(--shadow-lg)" }}
       >
-        <div className="px-5 py-4">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-semibold tracking-widest uppercase" style={{ color: "var(--text-dim)" }}>Tour • {idx + 1} / {total}</span>
-            <div className="flex gap-1">
-              {STEPS.map((_, i) => (
-                <span key={i} className="h-1 rounded-full transition-all" style={{ width: i === idx ? 20 : 8, background: i === idx ? "var(--primary)" : "var(--border-strong)" }} />
-              ))}
-            </div>
+        <div className="px-4 pt-3">
+          {/* progress */}
+          <div className="flex items-center gap-1">
+            {STEPS.map((_, i) => (
+              <span key={i} className="h-[3px] rounded-full transition-all duration-200" style={{ width: i === idx ? 22 : 8, background: i === idx ? "var(--primary)" : "var(--border-strong)" }} />
+            ))}
+            <span className="ml-auto text-[10px] font-mono" style={{ color: "var(--text-faint)" }}>{idx + 1}/{total}</span>
           </div>
-          <h3 className="text-[15px] font-semibold tracking-tight mt-2" style={{ color: "var(--text-strong)" }}>{step.title}</h3>
-          <p className="text-[13px] leading-relaxed mt-1.5" style={{ color: "var(--text-dim)" }}>{step.desc}</p>
+          <h3 className="text-[14px] font-semibold tracking-tight mt-2.5" style={{ color: "var(--text-strong)" }}>{step.title}</h3>
+          <p className="text-[12.5px] leading-relaxed mt-1" style={{ color: "var(--text-dim)" }}>{step.desc}</p>
         </div>
 
-        <div className="px-4 py-3 flex items-center justify-between border-t" style={{ background: "var(--bg-subtle)", borderColor: "var(--border)" }}>
-          <button onClick={onClose} className="text-[12px] font-medium px-3 py-1.5 rounded-md" style={{ color: "var(--text-dim)" }}>Skip</button>
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-mono hidden sm:inline" style={{ color: "var(--text-faint)" }}>Zoomed • Next highlights</span>
-            <button
-              onClick={() => {
-                if (idx < total - 1) setIdx((i) => i + 1);
-                else onClose();
-              }}
-              className="h-8 px-4 rounded-md text-[12px] font-semibold flex items-center gap-1.5"
-              style={{ background: "var(--text-strong)", color: "var(--bg)" }}
-            >
-              {idx === total - 1 ? "Done ✓" : "Next →"}
-            </button>
-          </div>
+        <div className="px-3 py-2.5 mt-3 flex items-center justify-between border-t" style={{ background: "var(--bg-subtle)", borderColor: "var(--border)" }}>
+          <button onClick={onClose} className="text-[11px] font-medium px-2 py-1 rounded-[4px] hover:underline" style={{ color: "var(--text-faint)" }}>Skip</button>
+          <button
+            onClick={() => { if (idx < total - 1) setIdx((i) => i + 1); else onClose(); }}
+            className="h-7 px-3.5 rounded-[5px] text-[11px] font-semibold"
+            style={{ background: "var(--text-strong)", color: "var(--bg)" }}
+          >
+            {idx === total - 1 ? "Get started" : "Next"}
+          </button>
         </div>
       </div>
     </div>

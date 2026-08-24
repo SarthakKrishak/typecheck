@@ -1,22 +1,24 @@
-# Security Policy — Typecheck
+# Security Policy
 
-**No data leaves your browser.** Typecheck stores only in `localStorage` (`typing-settings-v7`, `typing-history-v2`, `typecraft_deck_v1`, `typecraft_race_rooms_v1`). No cookies, no backend, no analytics.
+typecheck runs entirely in your browser. There is no server, no database, no API to attack. Your typing data never leaves your device.
 
-## Supported
-- `main` branch — latest `1.0.0` — receives security fixes.
+## Storage
+
+All data is stored in `localStorage`:
+
+| Key | Contents |
+|---|---|
+| `typing-settings-v9` | Theme, caret, sound, mode preferences |
+| `typing-history-v2` | Test results (max 200) |
+| `typecraft_deck_v1` | Vocabulary deck words |
+| `typecraft_race_rooms_v1` | Race room configs (max 24) |
+| `typecraft_daily_v1` | Daily challenge streak |
+| `typecraft_card_name` | Name on FUT card |
+
+Clearing browser data removes everything permanently.
 
 ## Reporting
-For sensitive issues (XSS via `customText`, `Race` link injection, `BroadcastChannel` spoofing):
 
-- Email: `hello@typecheck.test` with `Subject: [SECURITY] …`
-- Or GitHub **Security → Report a vulnerability** (private).
+For sensitive issues, email [security@typecheck.dev] or use [GitHub's private vulnerability reporting](https://github.com/SarthakKrishak/Typecraft/security/advisories/new). Do **not** open a public issue.
 
-Please include `vite build` version, browser, and `localStorage` keys if relevant. Do **not** open a public issue for sensitive reports.
-
-We aim to respond within 48h and patch within 7 days.
-
-## Scope
-- `src/lib/sound.ts` `fetch("/sounds/*.wav")` is local static only.
-- `TypingArea` `fetch` for GitHub raw is opt-in (paste URL) — we sanitize via `text.slice(0,4000)`.
-
-Thanks for helping keep typing private.
+We aim to respond within 48 hours.

@@ -3,44 +3,106 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Typecheck — Type faster. Race anyone.</title>
-    <meta name="description" content="The open-source typing test. Measure your WPM, race friends in real time, and track your progress — right in your browser." />
-    <meta name="keywords" content="typing test, WPM, typing speed, touch typing, open source, race, code typing" />
+
+    <!-- Primary SEO -->
+    <title>Typecheck - Free Online Typing Test | Measure WPM & Race Friends</title>
+    <meta name="description" content="Free open-source typing test. Measure your WPM and accuracy, race friends in real time, track progress with detailed analytics. No login required. Works offline." />
+    <meta name="keywords" content="typing test, free typing test, wpm test, words per minute, typing speed test, online typing test, typing practice, typing race, touch typing, learn typing, typing skills, cwpm, kpm, data entry test, 10fastfingers alternative, monkeytype alternative" />
     <meta name="author" content="Sarthak Krishak" />
-    <meta name="robots" content="index, follow" />
-    <meta name="theme-color" content="#19191B" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#FAFAFA" media="(prefers-color-scheme: light)" />
-    <link rel="canonical" href="https://typecheck.app/" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow" />
+    <link rel="canonical" href="https://typecheck.vercel.app/" />
+
+    <!-- Icons -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://api.github.com" />
+
+    <!-- Theme -->
+    <meta name="theme-color" content="#19191B" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#FAFAFA" media="(prefers-color-scheme: light)" />
+    <meta name="color-scheme" content="dark light" />
+
+    <!-- Open Graph -->
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://typecheck.app/" />
-    <meta property="og:title" content="Typecheck — Type faster. Race anyone." />
-    <meta property="og:description" content="The open-source typing test. Measure your speed, race friends in real time, track your progress." />
-    <meta property="og:image" content="/og-image.png" />
     <meta property="og:site_name" content="Typecheck" />
+    <meta property="og:url" content="https://typecheck.vercel.app/" />
+    <meta property="og:title" content="Typecheck — Free Online Typing Test | Measure WPM & Race Friends" />
+    <meta property="og:description" content="Free open-source typing test. Measure your WPM, race friends in real time, track progress with detailed analytics. No login required." />
+    <meta property="og:image" content="https://typecheck.vercel.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Typecheck" />
-    <meta name="twitter:description" content="Type faster. Race anyone." />
-    <meta name="twitter:image" content="/og-image.png" />
+    <meta name="twitter:site" content="@SarthakKrishak" />
+    <meta name="twitter:creator" content="@SarthakKrishak" />
+    <meta name="twitter:title" content="Typecheck — Free Online Typing Test" />
+    <meta name="twitter:description" content="Measure your WPM, race friends in real time, track progress. Free and open source." />
+    <meta name="twitter:image" content="https://typecheck.vercel.app/og-image.png" />
+
+    <!-- Structured Data: WebApplication -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
       "name": "Typecheck",
-      "description": "Open-source typing test. Measure your speed, race friends, track progress.",
+      "alternateName": "Typecheck Typing Test",
+      "url": "https://typecheck.vercel.app/",
+      "description": "Free open-source typing test. Measure your WPM and accuracy, race friends in real time, track progress with detailed analytics.",
       "applicationCategory": "EducationalApplication",
       "operatingSystem": "Any",
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      "browserRequirements": "Requires JavaScript",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "author": { "@type": "Person", "name": "Sarthak Krishak", "url": "https://github.com/SarthakKrishak" },
+      "aggregateRating": { "@type": "AggregateRating", "ratingValue": "5", "ratingCount": "1" },
+      "featureList": [
+        "Typing speed test (WPM)",
+        "Real-time multiplayer race",
+        "Detailed analytics and progress tracking",
+        "Keyboard error heatmap",
+        "Weak-key coaching",
+        "Multiple test modes",
+        "Custom text practice",
+        "Offline support (PWA)"
+      ]
+    }
+    </script>
+
+    <!-- Structured Data: FAQ (rich snippets) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is a good WPM typing speed?",
+          "acceptedAnswer": { "@type": "Answer", "text": "The average typing speed is 40 WPM. A good typing speed is 65+ WPM, and professional typists typically reach 75-95 WPM. Anything above 100 WPM is considered exceptional." }
+        },
+        {
+          "@type": "Question",
+          "name": "How is WPM calculated?",
+          "acceptedAnswer": { "@type": "Answer", "text": "WPM (words per minute) = (correct characters ÷ 5) ÷ (time in minutes). Every 5 characters counts as one word, including spaces." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is Typecheck free?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes, Typecheck is completely free and open source. There are no ads, no login required, and no premium features behind a paywall." }
+        }
+      ]
     }
     </script>
   </head>
   <body>
     <div id="root"></div>
-    <noscript>Typecheck needs JavaScript to run.</noscript>
+    <noscript>Typecheck needs JavaScript to run. Please enable it to use the typing test.</noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -1,3 +1,4 @@
 User-agent: *
 Allow: /
-Sitemap: https://typecheck.test/sitemap.xml
+
+Sitemap: https://typecheck.vercel.app/sitemap.xml

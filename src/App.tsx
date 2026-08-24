@@ -7,6 +7,7 @@ import { RaceSection } from "./components/Race";
 import { Tour, useTour } from "./components/Tour";
 import { WeakKeyCoach } from "./components/WeakKeyCoach";
 import { HealthNudge } from "./components/HealthNudge";
+import { StarPrompt } from "./components/StarPrompt";
 import { KeyboardDiagram } from "./components/KeyboardDiagram";
 import { DailyChallenge } from "./components/DailyChallenge";
 import { Wrapped } from "./components/Wrapped";
@@ -175,6 +176,7 @@ export default function App() {
 
       <FooterSettings />
       <HealthNudge />
+      <StarPrompt />
 
       {/* ── Footer — multi-column SaaS + built-by strip ── */}
       <footer className="border-t mt-8" style={{ borderColor: "var(--border)", background: "var(--bg-subtle)" }}>

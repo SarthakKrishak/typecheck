@@ -42,7 +42,7 @@ export function KeyboardDiagram({ charErrorMap, totalErrors }: Props) {
             {row.map((k) => {
               const label = k === "backspace" ? "⌫" : k === "capslock" ? "⇪" : k === "enter" ? "↵" : k === "shift" || k === "shift2" ? "⇧" : k === "space" ? "space" : k === "tab" ? "↹" : k === "ctrl" || k === "ctrl2" ? "ctrl" : k === "win" || k === "win2" ? "win" : k === "alt" || k === "alt2" ? "alt" : k === "menu" ? "☰" : k;
               const w = KEY_WIDTH[k] || 1;
-              const isChar = k.length === 1 && /[a-z0-9`\-=\[\]\\;',\.\/]/.test(k);
+              const isChar = k.length === 1 && /[a-z0-9`=\-[\];',./\\]/.test(k);
               const intensity = isChar ? getIntensity(k) : 0;
               const cnt = isChar ? charErrorMap[k] || 0 : 0;
               // color scale: from bg-muted to danger

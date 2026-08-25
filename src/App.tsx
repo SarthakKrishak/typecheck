@@ -13,6 +13,9 @@ import { DailyChallenge } from "./components/DailyChallenge";
 import { Wrapped } from "./components/Wrapped";
 import { CoachInsights } from "./components/CoachInsights";
 import { ReplayTheater } from "./components/ReplayTheater";
+import { BadgesPage } from "./components/BadgesPage";
+import { useBadgeStore } from "./store/useBadgeStore";
+import { useDailyStore } from "./store/useDailyStore";
 import { useSettingsStore } from "./store/useSettingsStore";
 import { useHistoryStore } from "./store/useHistoryStore";
 import type { Result } from "./engine/stats";
@@ -21,7 +24,7 @@ export default function App() {
   const theme = useSettingsStore((s) => s.theme);
   const [result, setResult] = useState<Result | null>(null);
   const [testKey, setTestKey] = useState(0);
-  const [view, setView] = useState<"test" | "race" | "analytics" | "history">("test");
+  const [view, setView] = useState<"test" | "race" | "analytics" | "badges">("test");
   const [drillWords, setDrillWords] = useState<string[] | null>(null);
   const [fixedWords, setFixedWords] = useState<string[] | null>(null);
   const [dailyActive, setDailyActive] = useState(false);
@@ -69,6 +72,7 @@ export default function App() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+  const restart = () => { setResult(null); setDailyActive(false); setFixedWords(null); setView("test"); setTestKey((k) => k + 1); window.scrollTo({ top: 0, behavior: "smooth" }); };
   // Global: Enter to restart (result or test), Space to focus/start when idle
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -95,11 +99,13 @@ export default function App() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [result, view]);
-  const restart = () => { setResult(null); setDailyActive(false); setFixedWords(null); setView("test"); setTestKey((k) => k + 1); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const handleResult = (r: Result) => {
     setResult(r);
     addResult(r);
     if (dailyActive) { setDailyDone({ wpm: r.wpm, accuracy: r.accuracy }); setDailyActive(false); }
+    // Evaluate badges
+    const streak = useDailyStore.getState().streak;
+    useBadgeStore.getState().evaluate(useHistoryStore.getState().results, streak);
   };
 
   // Adaptive Lab — auto adjusts next test when enabled
@@ -148,16 +154,10 @@ export default function App() {
           <ResultView result={result} onRestart={restart} onNext={restart} />
         ) : view === "race" ? (
           <RaceSection />
+        ) : view === "badges" ? (
+          <BadgesPage />
         ) : view === "analytics" ? (
           <AnalyticsView history={history} />
-        ) : view === "history" ? (
-          <div className="w-full max-w-[740px] mx-auto px-4 py-6">
-            <div className="panel p-5">
-              <div className="text-[13px] font-semibold" style={{ color: "var(--text-strong)" }}>History is below</div>
-              <div className="text-[11px] mt-1" style={{ color: "var(--text-dim)" }}>Scroll to Recent runs or start a new test.</div>
-              <button onClick={() => setView("test")} className="mt-3 h-7 px-3 rounded-md text-[12px] font-medium" style={{ background: "var(--text-strong)", color: "var(--bg)" }}>Back to test</button>
-            </div>
-          </div>
         ) : (
           <>
             {!dailyActive && !fixedWords && (
@@ -210,6 +210,7 @@ export default function App() {
                     ["Test", () => { restart(); }],
                     ["Race", () => { restart(); setView("race"); }],
                     ["Analytics", () => { restart(); setView("analytics"); }],
+                    ["Badges", () => { restart(); setView("badges"); }],
                     ["Preferences", () => document.getElementById("footer-settings")?.scrollIntoView({ behavior: "smooth" })],
                   ].map(([label, fn]) => (
                     <button key={label as string} onClick={fn as () => void} className="block text-[12px] hover:underline text-left" style={{ color: "var(--text-dim)" }}>{label as string}</button>

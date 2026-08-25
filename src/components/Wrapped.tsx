@@ -34,6 +34,7 @@ export function Wrapped() {
     try { localStorage.setItem("typecraft_card_name", name); } catch {}
   }, [name]);
 
+  // eslint-disable-next-line react-hooks(exhaustive-deps)
   useEffect(() => {
     if (open) requestAnimationFrame(() => requestAnimationFrame(() => draw()));
   }, [open, name]);
@@ -199,7 +200,7 @@ export function Wrapped() {
       wave.forEach((w, i) => {
         const px = wx + (i / (wave.length - 1)) * ww;
         const py = wy + wh - (w / maxV) * (wh - 20) - 10;
-        i === 0 ? x.moveTo(px, py) : x.lineTo(px, py);
+        if (i === 0) x.moveTo(px, py); else x.lineTo(px, py);
       });
       x.lineTo(wx + ww, wy + wh); x.lineTo(wx, wy + wh); x.closePath();
       const wf = x.createLinearGradient(0, wy, 0, wy + wh);
@@ -211,7 +212,7 @@ export function Wrapped() {
       wave.forEach((w, i) => {
         const px = wx + (i / (wave.length - 1)) * ww;
         const py = wy + wh - (w / maxV) * (wh - 20) - 10;
-        i === 0 ? x.moveTo(px, py) : x.lineTo(px, py);
+        if (i === 0) x.moveTo(px, py); else x.lineTo(px, py);
       });
       x.strokeStyle = t.ink; x.lineWidth = 4.5; x.lineJoin = "round"; x.lineCap = "round"; x.stroke();
 

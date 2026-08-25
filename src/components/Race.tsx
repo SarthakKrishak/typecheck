@@ -95,8 +95,14 @@ export function RaceSection() {
     channelRef.current = ch;
     const onMsg = (e: MessageEvent) => {
       const data = e.data as { type: "join" | "update" | "leave"; payload: Participant };
-      if (!data?.payload?.id) return;
-      if (data.payload.id === myIdRef.current) return; // ignore echo
+      // Validate incoming message shape — reject malformed/foreign messages
+      if (!data || typeof data !== "object" || !data.type || !data.payload) return;
+      if (!["join", "update", "leave"].includes(data.type)) return;
+      const p = data.payload;
+      if (typeof p.id !== "string" || typeof p.name !== "string" || typeof p.progress !== "number" || typeof p.wpm !== "number") return;
+      if (p.id === myIdRef.current) return; // ignore echo
+      if (p.name.length > 24) return; // reject overly long names
+      if (p.progress < 0 || p.progress > 100) return;
       if (data.type === "join") {
         setParticipants((prev) => (prev.find((p) => p.id === data.payload.id) ? prev : [...prev, data.payload]));
       } else if (data.type === "update") {

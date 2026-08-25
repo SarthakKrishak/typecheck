@@ -67,7 +67,3 @@ export function HealthNudge() {
   );
 }
 
-// Helper to emit tick from TypingArea
-export function emitTypingTick(seconds: number) {
-  try { window.dispatchEvent(new CustomEvent("typecraft-tick", { detail: { seconds } })); } catch {}
-}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "../store/useSettingsStore";
 import { useHistoryStore } from "../store/useHistoryStore";
+import { useBadgeStore, BADGE_DEFS } from "../store/useBadgeStore";
 import { playMechanical, playCorrectWord } from "../lib/sound";
 import { Tooltip } from "./Tooltip";
 
@@ -16,6 +17,8 @@ const THEMES = [
 export function Header({ onLogoClick, activeView, onViewChange, onTour }: { onLogoClick: () => void; activeView?: string; onViewChange?: (v: string) => void; onTour?: () => void }) {
   const { theme, setTheme, soundOnClick, soundKeys, soundWords, toggle } = useSettingsStore();
   const best = useHistoryStore((s) => s.bestWpm());
+  const badgeLatest = useBadgeStore((s) => s.latest);
+  const badgeUnlocked = useBadgeStore((s) => s.unlocked);
   const [themeOpen, setThemeOpen] = useState(false);
   const [soundOpen, setSoundOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -70,7 +73,7 @@ export function Header({ onLogoClick, activeView, onViewChange, onTour }: { onLo
           </button>
 
           <nav className="hidden md:flex items-center gap-0.5">
-            {[{ id: "test", label: "Test" }, { id: "race", label: "Race" }, { id: "analytics", label: "Analytics" }].map((item) => {
+            {[{ id: "test", label: "Test" }, { id: "race", label: "Race" }, { id: "analytics", label: "Analytics" }, { id: "badges", label: "Badges" }].map((item) => {
               const active = activeView === item.id || (item.id === "test" && !activeView);
               return (
                 <button key={item.id} onClick={() => onViewChange?.(item.id)} className="px-2 py-1 text-[12.5px] font-[450] tracking-tight rounded-[4px]" style={{ color: active ? "var(--text-strong)" : "var(--text-dim)", background: active ? "var(--bg-muted)" : "transparent" }}>{item.label}</button>
@@ -85,6 +88,27 @@ export function Header({ onLogoClick, activeView, onViewChange, onTour }: { onLo
                 {best} <span className="text-[9px] font-sans font-medium" style={{ color: "var(--text-dim)" }}>best</span>
               </span>
             </Tooltip>
+          )}
+
+          {/* Latest 3 badges */}
+          {badgeLatest.length > 0 && (
+            <div className="hidden xl:flex items-center gap-1">
+              {badgeLatest.map((id) => {
+                const def = BADGE_DEFS.find((b) => b.id === id);
+                if (!def) return null;
+                const ts = def.tier === "diamond" ? "#64b5f6" : def.tier === "gold" ? "#d4af37" : def.tier === "silver" ? "#a0a0b0" : "#c4884a";
+                return (
+                  <Tooltip key={id} content={`${def.name} — ${def.desc}`}>
+                    <span className="w-5 h-5 rounded-[4px] flex items-center justify-center text-[9px] font-mono font-bold border cursor-default" style={{ background: `${ts}18`, borderColor: `${ts}40`, color: ts }}>
+                      {def.icon}
+                    </span>
+                  </Tooltip>
+                );
+              })}
+              <span className="text-[9px] font-mono" style={{ color: "var(--text-faint)" }}>
+                {Object.keys(badgeUnlocked).length}/{BADGE_DEFS.length}
+              </span>
+            </div>
           )}
         </div>
 

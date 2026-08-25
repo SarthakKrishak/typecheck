@@ -142,6 +142,7 @@ export function Tour({ open, onClose, onNavigate }: { open: boolean; onClose: ()
   );
 }
 
+// eslint-disable-next-line react(only-export-components)
 export function useTour() {
   const [open, setOpen] = useState(false);
   useEffect(() => {

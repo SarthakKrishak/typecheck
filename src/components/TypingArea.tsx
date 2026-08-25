@@ -5,7 +5,7 @@ import type { Result } from "../engine/stats";
 import { generateWords } from "../data/words";
 import { QUOTES } from "../data/quotes";
 import { playMechanical, playCorrectWord, playMetronome } from "../lib/sound";
-import { emitTypingTick } from "./HealthNudge";
+import { emitTypingTick } from "../lib/events";
 import { useDeckStore } from "../store/useDeckStore";
 import { useHistoryStore } from "../store/useHistoryStore";
 import { HandGuide } from "./HandGuide";
@@ -52,23 +52,30 @@ export function TypingArea({ onResult, keyTrigger, drillWords, onDrillDone, fixe
     playCorrectWord();
   };
 
+  const [githubError, setGithubError] = useState<string | null>(null);
   const fetchGithub = async () => {
     const url = githubUrl.trim();
     if (!url) return;
     setFetchingCode(true);
+    setGithubError(null);
     try {
-      let rawUrl = url;
-      if (url.includes("github.com") && url.includes("/blob/")) {
-        rawUrl = url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/");
-      }
-      const res = await fetch(rawUrl);
-      if (!res.ok) throw new Error(`Fetch failed ${res.status}`);
+      let rawUrl: URL;
+      try { rawUrl = new URL(url); } catch { throw new Error("Invalid URL"); }
+      // Only allow raw.githubusercontent.com or github.com blob URLs
+      const isRaw = rawUrl.hostname === "raw.githubusercontent.com";
+      const isBlob = rawUrl.hostname === "github.com" && rawUrl.pathname.includes("/blob/");
+      if (!isRaw && !isBlob) throw new Error("Only GitHub file URLs are supported");
+      const fetchUrl = isBlob
+        ? url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+        : url;
+      const res = await fetch(fetchUrl);
+      if (!res.ok) throw new Error(`Fetch failed (${res.status})`);
       const text = await res.text();
-      const clipped = text.slice(0, 4000);
-      settings.setCustomText(clipped);
+      if (!text) throw new Error("File is empty");
+      settings.setCustomText(text.slice(0, 4000));
       setGithubUrl("");
     } catch (e) {
-      alert("Failed to fetch GitHub file. Try pasting code directly. " + (e as Error).message);
+      setGithubError((e as Error).message);
     } finally { setFetchingCode(false); }
   };
 
@@ -138,27 +145,36 @@ export function TypingArea({ onResult, keyTrigger, drillWords, onDrillDone, fixe
     return () => clearInterval(iv);
   }, [settings.rhythm, startTime, finished]);
 
+  // Refs for timer — prevents interval from resetting on every keystroke
+  const correctCharsRef = useRef(0);
+  const incorrectCharsRef = useRef(0);
+  const extraCountRef = useRef(0);
+  const wpmHistoryLenRef = useRef(0);
+  const finishRef = useRef<(e?: number) => void>(() => {});
+  correctCharsRef.current = correctChars;
+  incorrectCharsRef.current = incorrectChars;
+  extraCountRef.current = extraCount;
+  wpmHistoryLenRef.current = wpmHistory.length;
+
   useEffect(() => {
     if (startTime === null || finished) return;
     const id = window.setInterval(() => {
       const e = (Date.now() - startTime) / 1000;
       setElapsed(e);
       const el = Math.floor(e);
-      const curWpm = calcWpm(correctChars, e);
-      const curRaw = calcRaw(correctChars + incorrectChars + extraCount, e);
+      const curWpm = calcWpm(correctCharsRef.current, e);
+      const curRaw = calcRaw(correctCharsRef.current + incorrectCharsRef.current + extraCountRef.current, e);
       setWpm(curWpm); setRaw(curRaw);
-      if (el > 0) {
-        if (wpmHistory.length < el) {
-          setWpmHistory((h) => [...h, curWpm]); setRawHistory((h) => [...h, curRaw]);
-          emitTypingTick(1);
-        }
+      if (el > 0 && wpmHistoryLenRef.current < el) {
+        setWpmHistory((h) => [...h, curWpm]); setRawHistory((h) => [...h, curRaw]);
+        wpmHistoryLenRef.current = el;
+        emitTypingTick(1);
       }
-      if (settings.mode === "time" && e >= timeLimit) finish(e);
-      // streamer overlay live feed
+      if (settings.mode === "time" && e >= timeLimit) finishRef.current(e);
       window.dispatchEvent(new CustomEvent("typecraft-live", { detail: { wpm: curWpm, raw: curRaw, acc: liveAccRef.current, left: settings.mode === "time" ? Math.max(0, Math.ceil(timeLimit - e)) : null } }));
     }, 100);
     return () => clearInterval(id);
-  }, [startTime, finished, correctChars, incorrectChars, extraCount, timeLimit, settings.mode, wpmHistory.length]);
+  }, [startTime, finished, timeLimit, settings.mode]);
 
   const finish = (finalElapsed?: number) => {
     if (finished) return;
@@ -197,6 +213,7 @@ export function TypingArea({ onResult, keyTrigger, drillWords, onDrillDone, fixe
     setFinished(true); onResult(result);
     if (drillWords) onDrillDone?.();
   };
+  finishRef.current = finish;
 
   const handleInput = (val: string) => {
     if (finished) return;
@@ -517,9 +534,10 @@ export function TypingArea({ onResult, keyTrigger, drillWords, onDrillDone, fixe
         <div className="panel p-4 mb-4 space-y-3">
           <div className="text-[11px] font-semibold tracking-widest uppercase" style={{ color: "var(--text-dim)" }}>Your-Code Typing — paste code or GitHub URL</div>
           <div className="flex gap-2">
-            <input value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} placeholder="https://github.com/user/repo/blob/main/file.ts" className="flex-1 h-8 rounded-md border px-3 text-[12px] font-mono" style={{ background: "var(--bg-subtle)", borderColor: "var(--border)", color: "var(--text-strong)" }} />
+            <input value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} placeholder="https://github.com/user/repo/blob/main/file.ts" className="flex-1 h-8 rounded-md border px-3 text-[12px] font-mono" style={{ background: "var(--bg-subtle)", borderColor: githubError ? "var(--danger)" : "var(--border)", color: "var(--text-strong)" }} />
             <button onClick={fetchGithub} disabled={fetchingCode || !githubUrl.trim()} className="h-8 px-3 rounded-md text-[12px] font-medium border disabled:opacity-50" style={{ background: "var(--primary)", color: "white", borderColor: "var(--primary)" }}>{fetchingCode ? "..." : "Fetch"}</button>
           </div>
+          {githubError && <div className="text-[11px] px-2 py-1 rounded-md border" style={{ background: "color-mix(in srgb, var(--danger) 8%, transparent)", borderColor: "var(--danger)", color: "var(--danger)" }}>{githubError}</div>}
           <textarea
             value={settings.customText}
             onChange={(e) => settings.setCustomText(e.target.value)}

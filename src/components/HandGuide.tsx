@@ -4,7 +4,7 @@ const FINGER_POS: Record<string, { hand: "L" | "R"; finger: number }> = {
   "R-index": { hand: "R", finger: 3 }, "R-middle": { hand: "R", finger: 2 }, "R-ring": { hand: "R", finger: 1 }, "R-pinky": { hand: "R", finger: 0 },
 };
 
-export function fingerOf(key: string): string {
+function fingerOf(key: string): string {
   if ("qaz`1\t".includes(key)) return "L-pinky";
   if ("wsx2".includes(key)) return "L-ring";
   if ("edc3".includes(key)) return "L-middle";

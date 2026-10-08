@@ -130,7 +130,7 @@ export function WeakKeyCoach({ onDrill }: { onDrill?: (words: string[]) => void 
           <div className="pt-3 border-t space-y-2" style={{ borderColor: "var(--border)" }}>
             <div className="flex items-center justify-between gap-3">
               <span className="text-[12px]" style={{ color: "var(--text-dim)" }}>Drill: <span className="font-mono" style={{ color: "var(--text-strong)" }}>{drillWords.slice(0, 3).join(" ")}…</span> ({drillWords.length} words)</span>
-              <button onClick={() => onDrill?.(drillWords)} className="h-7 px-3 rounded-md text-[12px] font-medium shrink-0" style={{ background: "var(--primary)", color: "white" }}>Drill →</button>
+              <button onClick={() => onDrill?.(drillWords)} className="h-7 px-3 rounded-md text-[12px] font-medium shrink-0" style={{ background: "var(--primary)", color: "var(--on-primary)" }}>Drill →</button>
             </div>
             <div className="flex items-center gap-2">
               <button onClick={() => deck.addWords(drillWords)} className="h-6 px-2.5 rounded-md text-[11px] font-medium border" style={{ background: "var(--bg-muted)", borderColor: "var(--border)", color: "var(--text-dim)" }}>Save to deck (30% inject)</button>

@@ -1,30 +1,62 @@
-import { useEffect, useState, useLayoutEffect, useRef } from "react";
+import { useEffect, useState, useLayoutEffect, useRef, useCallback } from "react";
+import { useModalBehavior } from "../lib/modal";
 
 type Step = {
   id: string;
+  kicker: string;
   title: string;
   desc: string;
+  hint?: string;
   target?: string;
   placement?: "bottom" | "top" | "center";
 };
 
 const STEPS: Step[] = [
-  { id: "welcome", title: "Welcome to typecheck", desc: "Minimal, private, fast — no login. Everything stays in your browser. Let's take a quick tour. You can replay anytime from the Tour button.", placement: "center" },
-  { id: "header", title: "Navigation", desc: "Switch between Test, Race, and Analytics. Sound and theme controls are on the right. Press ? for keyboard shortcuts.", target: "[data-tour='header']" },
-  { id: "test-config", title: "Test controls", desc: "Pick a mode — Time, Words, Quote, Zen, or Custom — and set the length. Toggle punctuation and numbers for extra challenge.", target: "[data-tour='test-config']" },
-  { id: "typing-area", title: "Typing canvas", desc: "Start typing to begin. Correct characters light up, errors show in red. Tab+Enter restarts. Ctrl+Backspace clears a word.", target: "[data-tour='typing-area']" },
-  { id: "sound", title: "Mechanical sound", desc: "Sound is off by default. Click the speaker to enable mechanical key thocks and a chime for perfect words — each toggleable separately.", target: "[data-tour='sound']" },
-  { id: "theme", title: "Themes", desc: "Five themes with live previews. Cycle with the shortcut. Font size, caret style, and accessibility options live in Preferences below.", target: "[data-tour='theme']" },
-  { id: "race", title: "Race mode", desc: "Create public or private rooms. Private rooms need a passcode. Share the link — friends open it in another tab and race in real time.", target: "[data-tour='race']" },
-  { id: "analytics", title: "Analytics", desc: "WPM trend, per-second speed chart, keyboard error heatmap, and finger-level breakdown. Export everything as CSV.", target: "[data-tour='analytics']" },
-  { id: "prefs", title: "Preferences", desc: "Caret style, font size, sound toggles, blind mode, adaptive difficulty — all saved locally. No account needed.", target: "[data-tour='prefs']" },
+  { id: "welcome", kicker: "Welcome", title: "Welcome to typecheck", desc: "Minimal, private, fast — no login, everything stays in your browser. This 9-step tour takes ~40 seconds. Replay it anytime from the Tour button in the header.", placement: "center" },
+  { id: "header", kicker: "Navigate", title: "Test · Race · Analytics · Badges", desc: "Switch views here. Sound, theme and your profile live on the right. Press ? anytime for keyboard shortcuts.", hint: "? — shortcuts", target: "[data-tour='header']" },
+  { id: "test-config", kicker: "Configure", title: "Test controls", desc: "Pick a mode — Time, Words, Quote, Zen, or Custom — set the length, and toggle punctuation, numbers, or code for extra challenge.", target: "[data-tour='test-config']" },
+  { id: "typing-area", kicker: "Type", title: "Typing canvas", desc: "Just start typing — the clock starts on your first key. Correct letters go green, errors red. Enter restarts, Ctrl+Backspace clears a word.", hint: "Enter — restart", target: "[data-tour='typing-area']" },
+  { id: "sound", kicker: "Feel", title: "Mechanical sound", desc: "Off by default. Enable it for thocky key sounds plus a chime on perfect words — each toggleable separately.", target: "[data-tour='sound']" },
+  { id: "theme", kicker: "Style", title: "Themes", desc: "Six themes with live previews — cycle them instantly. Caret style, font size and accessibility options live in Preferences below.", hint: "⌘/Ctrl J — cycle theme", target: "[data-tour='theme']" },
+  { id: "race", kicker: "Compete", title: "Real-time races", desc: "Host an open or private room, share the link, and race friends live across devices with a synced countdown and podium finish.", target: "[data-tour='race']" },
+  { id: "analytics", kicker: "Improve", title: "Analytics", desc: "WPM trend, per-second speed, keyboard error heatmap, finger-level breakdown, your Wrapped card and replay theater. Export everything as CSV.", target: "[data-tour='analytics']" },
+  { id: "prefs", kicker: "Tune", title: "Preferences", desc: "Blind mode, strict word mode, adaptive difficulty, focus mode, dyslexia font, ghost pacer — all saved locally, no account needed. You're all set!", target: "[data-tour='prefs']" },
 ];
 
-export function Tour({ open, onClose, onNavigate }: { open: boolean; onClose: () => void; onNavigate?: (v: string) => void }) {
+export function Tour({ open, onClose, onNavigate, onFinish }: {
+  open: boolean;
+  onClose: () => void;
+  onNavigate?: (v: string) => void;
+  onFinish?: () => void;
+}) {
   const [idx, setIdx] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const step = STEPS[idx];
+  const total = STEPS.length;
+  const last = idx === total - 1;
+
+  const finish = useCallback(() => { onFinish?.(); onClose(); }, [onFinish, onClose]);
+  const next = useCallback(() => {
+    if (idx < total - 1) setIdx((i) => i + 1);
+    else finish();
+  }, [idx, total, finish]);
+  const back = useCallback(() => setIdx((i) => Math.max(0, i - 1)), []);
+  useModalBehavior(open, closeModal, cardRef);
+  function closeModal() { onClose(); }
+
+  // keyboard: arrows navigate, Enter advances, Esc closes (via modal hook)
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+      if (e.key === "ArrowRight" || e.key === "Enter") { e.preventDefault(); next(); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); back(); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, next, back]);
 
   const updateRect = () => {
     if (!step.target || step.placement === "center") { setRect(null); return; }
@@ -37,11 +69,6 @@ export function Tour({ open, onClose, onNavigate }: { open: boolean; onClose: ()
     el.style.boxShadow = "0 0 0 2px var(--primary), var(--shadow-lg)";
     el.style.zIndex = "30";
     el.style.position = "relative";
-    return () => {
-      el.style.transform = "";
-      el.style.boxShadow = "";
-      el.style.zIndex = "";
-    };
   };
 
   useEffect(() => {
@@ -59,12 +86,15 @@ export function Tour({ open, onClose, onNavigate }: { open: boolean; onClose: ()
       (el as HTMLElement).style.zIndex = "";
     });
     if (!open) return;
+    // Retry — the target view may still be mounting after onNavigate.
     const t = setTimeout(() => updateRect(), 80);
+    const t2 = setTimeout(() => updateRect(), 350);
     const onResize = () => updateRect();
     window.addEventListener("resize", onResize);
     window.addEventListener("scroll", onResize, true);
     return () => {
       clearTimeout(t);
+      clearTimeout(t2);
       window.removeEventListener("resize", onResize);
       window.removeEventListener("scroll", onResize, true);
       document.querySelectorAll("[data-tour]").forEach((el) => {
@@ -73,6 +103,7 @@ export function Tour({ open, onClose, onNavigate }: { open: boolean; onClose: ()
         (el as HTMLElement).style.zIndex = "";
       });
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idx, open, step.target]);
 
   useEffect(() => {
@@ -82,12 +113,31 @@ export function Tour({ open, onClose, onNavigate }: { open: boolean; onClose: ()
   if (!open) return null;
 
   const isCenter = !step.target || step.placement === "center";
-  const total = STEPS.length;
+  // If the target isn't mounted yet, fall back to a centered card.
+  const targetMissing = !isCenter && !rect;
+
+  // Anchored popover position: below the spotlight when it fits, else above.
+  // Horizontally clamped to the viewport.
+  let cardStyle: React.CSSProperties = {};
+  let anchored = false;
+  if (rect && !isCenter) {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const CARD_W = Math.min(400, vw - 32);
+    const EST_H = 250;
+    const left = Math.max(16, Math.min(rect.left, vw - CARD_W - 16));
+    const belowFits = rect.bottom + 12 + EST_H <= vh;
+    const placeBelow = step.placement !== "top" && (belowFits || step.placement === "bottom" || rect.top < EST_H + 60);
+    anchored = true;
+    cardStyle = placeBelow
+      ? { position: "fixed", left, top: rect.bottom + 12, width: CARD_W }
+      : { position: "fixed", left, top: Math.max(12, rect.top - 12), width: CARD_W, transform: "translateY(-100%)" };
+  }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center">
-      {/* dim backdrop — no blur */}
-      {isCenter ? (
+    <div className={`fixed inset-0 z-[60] ${(anchored || isCenter || targetMissing) ? "" : "flex items-center justify-center"}`}>
+      {/* dim backdrop */}
+      {isCenter || targetMissing ? (
         <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.42)" }} onClick={onClose} />
       ) : (
         <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.08)" }} onClick={onClose} />
@@ -109,32 +159,56 @@ export function Tour({ open, onClose, onNavigate }: { open: boolean; onClose: ()
         />
       )}
 
-      {/* card */}
+      {/* card — anchored popover, or centered */}
       <div
         ref={cardRef}
-        className="relative w-full max-w-[400px] mx-4 rounded-lg border overflow-hidden animate-[fadeIn_0.15s_ease]"
-        style={{ background: "var(--bg-surface)", borderColor: "var(--border-strong)", boxShadow: "var(--shadow-lg)" }}
+        role="dialog" aria-modal="true" aria-label={step.title}
+        className={anchored ? "rounded-lg border overflow-hidden transition-all duration-300" : "relative w-full max-w-[400px] mx-4 my-auto rounded-lg border overflow-hidden animate-[fadeIn_0.15s_ease]"}
+        style={{ background: "var(--bg-surface)", borderColor: "var(--border-strong)", boxShadow: "var(--shadow-lg)", zIndex: 1, ...cardStyle }}
       >
-        <div className="px-4 pt-3">
-          {/* progress */}
+        <div className="px-4 pt-3" aria-live="polite">
+          {/* progress — clickable dots */}
           <div className="flex items-center gap-1">
-            {STEPS.map((_, i) => (
-              <span key={i} className="h-[3px] rounded-full transition-all duration-200" style={{ width: i === idx ? 22 : 8, background: i === idx ? "var(--primary)" : "var(--border-strong)" }} />
+            {STEPS.map((s, i) => (
+              <button
+                key={s.id}
+                onClick={() => setIdx(i)}
+                title={`${i + 1}. ${s.title}`}
+                aria-label={`Go to step ${i + 1}: ${s.title}`}
+                className="h-[14px] flex items-center rounded-full"
+                style={{ width: i === idx ? 22 : 14 }}
+              >
+                <span className="h-[3px] rounded-full transition-all duration-200 w-full" style={{ background: i < idx ? "var(--primary)" : i === idx ? "var(--primary)" : "var(--border-strong)", opacity: i < idx ? 0.55 : 1 }} />
+              </button>
             ))}
-            <span className="ml-auto text-[10px] font-mono" style={{ color: "var(--text-faint)" }}>{idx + 1}/{total}</span>
+            <span className="ml-auto text-[10px] font-mono shrink-0" style={{ color: "var(--text-faint)" }}>{idx + 1}/{total}</span>
           </div>
-          <h3 className="text-[14px] font-semibold tracking-tight mt-2.5" style={{ color: "var(--text-strong)" }}>{step.title}</h3>
+          <div className="text-[10px] font-semibold tracking-widest uppercase mt-2.5" style={{ color: "var(--primary)" }}>{step.kicker}</div>
+          <h3 className="text-[14px] font-semibold tracking-tight mt-0.5" style={{ color: "var(--text-strong)" }}>{step.title}</h3>
           <p className="text-[12.5px] leading-relaxed mt-1" style={{ color: "var(--text-dim)" }}>{step.desc}</p>
+          {step.hint && (
+            <div className="mt-2 flex items-center gap-1.5 text-[11px]" style={{ color: "var(--text-faint)" }}>
+              <span className="kbd">{step.hint.split(" — ")[0]}</span>
+              <span>{step.hint.split(" — ")[1] ?? ""}</span>
+            </div>
+          )}
         </div>
 
         <div className="px-3 py-2.5 mt-3 flex items-center justify-between border-t" style={{ background: "var(--bg-subtle)", borderColor: "var(--border)" }}>
-          <button onClick={onClose} className="text-[11px] font-medium px-2 py-1 rounded-[4px] hover:underline" style={{ color: "var(--text-faint)" }}>Skip</button>
+          <div className="flex items-center gap-1">
+            <button onClick={onClose} className="text-[11px] font-medium px-2 py-1 rounded-[4px] hover:underline" style={{ color: "var(--text-faint)" }}>Skip tour</button>
+            {idx > 0 && (
+              <button onClick={back} className="h-7 px-3 rounded-[5px] text-[11px] font-medium border" style={{ background: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-strong)" }}>← Back</button>
+            )}
+          </div>
+          <span className="text-[10px] hidden sm:inline" style={{ color: "var(--text-faint)" }}>← → to move</span>
           <button
-            onClick={() => { if (idx < total - 1) setIdx((i) => i + 1); else onClose(); }}
+            onClick={next}
+            autoFocus
             className="h-7 px-3.5 rounded-[5px] text-[11px] font-semibold"
             style={{ background: "var(--text-strong)", color: "var(--bg)" }}
           >
-            {idx === total - 1 ? "Get started" : "Next"}
+            {last ? "Get started →" : "Next →"}
           </button>
         </div>
       </div>

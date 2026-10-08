@@ -13,9 +13,13 @@ type DailyState = {
 };
 
 function yesterday(date: string): string {
-  const d = new Date(date + "T12:00:00");
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().slice(0, 10);
+  // Local-calendar yesterday (matches todayKey below)
+  const [y, m, d] = date.split("-").map(Number);
+  const dt = new Date(y, (m ?? 1) - 1, d ?? 1);
+  dt.setDate(dt.getDate() - 1);
+  const mm = String(dt.getMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getDate()).padStart(2, "0");
+  return `${dt.getFullYear()}-${mm}-${dd}`;
 }
 
 export const useDailyStore = create<DailyState>()(
@@ -37,6 +41,7 @@ export const useDailyStore = create<DailyState>()(
         }
         const continued = s.lastDate === yesterday(date);
         const streak = continued ? s.streak + 1 : 1;
+        const wasBest = streak > s.bestStreak;
         const bestStreak = Math.max(s.bestStreak, streak);
         set({
           lastDate: date,
@@ -44,7 +49,7 @@ export const useDailyStore = create<DailyState>()(
           bestStreak,
           history: [{ date, wpm, accuracy }, ...s.history].slice(0, 90),
         });
-        return { streak, isNewBest: streak >= bestStreak };
+        return { streak, isNewBest: wasBest };
       },
       todayDone: (today) => get().lastDate === today && get().history.some((h) => h.date === today),
       bestToday: (today) => get().history.find((h) => h.date === today)?.wpm ?? 0,
@@ -65,5 +70,9 @@ export function mulberry32(seed: number) {
 }
 
 export function todayKey(): string {
-  return new Date().toISOString().slice(0, 10);
+  // Local calendar day — streaks must follow the user's midnight, not UTC.
+  const n = new Date();
+  const mm = String(n.getMonth() + 1).padStart(2, "0");
+  const dd = String(n.getDate()).padStart(2, "0");
+  return `${n.getFullYear()}-${mm}-${dd}`;
 }

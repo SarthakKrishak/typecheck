@@ -3,12 +3,14 @@ import type { Result } from "../engine/stats";
 import { useHistoryStore } from "../store/useHistoryStore";
 
 export function ResultView({ result, onRestart, onNext }: { result: Result; onRestart: () => void; onNext: () => void }) {
+  const results = useHistoryStore((s) => s.results);
   const best = useHistoryStore((s) => s.bestWpm());
-  const isPB = result.wpm === best && best > 0;
+  // Only the single record holder counts — ties with an older run are not "new".
+  const isPB = result.wpm === best && best > 0 && results.filter((r) => r.wpm === best).length === 1;
   const data = result.wpmHistory.map((w, i) => ({ s: i + 1, wpm: w, raw: result.rawHistory[i] ?? w }));
 
   const copy = () => {
-    const t = `${result.wpm} WPM · ${result.accuracy}% · ${result.mode} ${result.mode === "time" ? result.time + "s" : ""} — typecraft`;
+    const t = `${result.wpm} WPM · ${result.accuracy}% · ${result.mode} ${result.mode === "time" ? result.time + "s" : ""} — typecheck`;
     navigator.clipboard.writeText(t);
   };
 

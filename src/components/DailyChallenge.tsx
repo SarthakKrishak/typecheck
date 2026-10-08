@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { COMMON_WORDS } from "../data/words";
 import { useDailyStore, mulberry32, todayKey } from "../store/useDailyStore";
 
@@ -9,11 +9,19 @@ export function DailyChallenge({ onStart, active, doneResult }: { onStart: (word
   const done = daily.todayDone(today);
   const [justDone, setJustDone] = useState<{ wpm: number; accuracy: number; streak: number } | null>(null);
 
-  // record when a finished result arrives
-  if (active && doneResult && !justDone) {
+  // record when a finished result arrives (effect, not render — StrictMode-safe,
+  // idempotent via store guard; re-arms for a new day)
+  useEffect(() => {
+    if (!active || !doneResult) return;
     const res = daily.record(today, doneResult.wpm, doneResult.accuracy);
     setJustDone(res ? { ...doneResult, streak: res.streak } : { ...doneResult, streak: daily.streak });
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, doneResult, today]);
+
+  // Re-arm for the next day / next attempt
+  useEffect(() => {
+    if (!active && !doneResult) setJustDone(null);
+  }, [active, doneResult]);
 
   const words = useMemo(() => {
     let h = 0;
@@ -41,13 +49,13 @@ export function DailyChallenge({ onStart, active, doneResult }: { onStart: (word
           </div>
         </div>
         {!done ? (
-          <button onClick={() => onStart(words)} disabled={active} className="h-8 px-4 rounded-md text-[12px] font-semibold disabled:opacity-60" style={{ background: "var(--primary)", color: "white" }}>
+          <button onClick={() => onStart(words)} disabled={active} className="h-8 px-4 rounded-md text-[12px] font-semibold disabled:opacity-60" style={{ background: "var(--primary)", color: "var(--on-primary)" }}>
             {active ? "In progress…" : "Start today's →"}
           </button>
         ) : (
           <div className="flex items-center gap-2">
             <span className="text-[12px] font-mono font-bold" style={{ color: "#10B981" }}>✓ {daily.bestToday(today)} WPM today</span>
-            <button onClick={() => share(daily.bestToday(today), 100)} className="h-7 px-3 rounded-md text-[11px] font-medium border" style={{ background: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-strong)" }}>Share</button>
+            <button onClick={() => share(daily.bestToday(today), daily.history.find((h) => h.date === today)?.accuracy ?? 0)} className="h-7 px-3 rounded-md text-[11px] font-medium border" style={{ background: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-strong)" }}>Share</button>
           </div>
         )}
       </div>
@@ -57,7 +65,7 @@ export function DailyChallenge({ onStart, active, doneResult }: { onStart: (word
           <span className="text-[12px] font-medium" style={{ color: "var(--text-strong)" }}>
             Recorded — streak is now <b>{justDone?.streak ?? daily.streak}</b>
           </span>
-          <button onClick={() => share(justDone?.wpm ?? doneResult!.wpm, justDone?.accuracy ?? doneResult!.accuracy)} className="h-7 px-3 rounded-md text-[11px] font-medium" style={{ background: "var(--primary)", color: "white" }}>Copy & brag</button>
+          <button onClick={() => share(justDone?.wpm ?? doneResult!.wpm, justDone?.accuracy ?? doneResult!.accuracy)} className="h-7 px-3 rounded-md text-[11px] font-medium" style={{ background: "var(--primary)", color: "var(--on-primary)" }}>Copy & brag</button>
         </div>
       )}
     </div>

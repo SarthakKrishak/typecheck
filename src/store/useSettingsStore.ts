@@ -90,6 +90,30 @@ export const useSettingsStore = create<SettingsState>()(
         return p as SettingsState;
       },
       version: 9,
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<SettingsState>;
+        const validThemes: Theme[] = ["graphite", "dark", "light", "midnight", "forest", "rose"];
+        const validModes: TestMode[] = ["time", "words", "quote", "zen", "custom"];
+        const validTimes = [15, 30, 60, 120] as const;
+        const validWords = [10, 25, 50, 100] as const;
+        const out = { ...current, ...p };
+        if (!validThemes.includes(out.theme)) out.theme = current.theme;
+        if (!validModes.includes(out.mode)) out.mode = current.mode;
+        if (!validTimes.includes(out.time as never)) out.time = current.time;
+        if (!validWords.includes(out.words as never)) out.words = current.words;
+        if (out.language !== "english" && out.language !== "code") out.language = current.language;
+        if (!["line", "block", "underline"].includes(out.caretStyle)) out.caretStyle = current.caretStyle;
+        if (!Number.isFinite(out.fontSize)) out.fontSize = current.fontSize;
+        else out.fontSize = Math.max(12, Math.min(48, Math.round(out.fontSize)));
+        if (typeof out.customText !== "string") out.customText = current.customText;
+        else out.customText = out.customText.slice(0, 8000);
+        if (!Number.isFinite(out.ghostWpm) || out.ghostWpm < 0) out.ghostWpm = 0;
+        else out.ghostWpm = Math.min(300, Math.round(out.ghostWpm));
+        for (const k of ["blindMode","stopOnWord","soundOnClick","soundKeys","soundWords","adaptive","focusMode","dyslexia","highContrast","breathing","ghost","handGuide","rhythm","punctuation","numbers"] as const) {
+          if (typeof out[k] !== "boolean") (out as Record<string, unknown>)[k] = current[k];
+        }
+        return out;
+      },
     }
   )
 );

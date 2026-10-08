@@ -57,6 +57,9 @@ export function KeyboardDiagram({ charErrorMap, totalErrors }: Props) {
                 <div
                   key={k + ri}
                   className="h-8 rounded-md border flex items-center justify-center text-[10px] font-mono font-medium select-none relative"
+                  tabIndex={isChar ? 0 : undefined}
+                  role={isChar ? "img" : undefined}
+                  aria-label={isChar ? `${k.toUpperCase()} • ${fingerOf(k)} • ${cnt} errors${totalErrors ? ` • ${(cnt / totalErrors * 100).toFixed(1)}% of errors` : ""}` : label}
                   style={{
                     flex: w,
                     maxWidth: w > 2 ? 96 : 36,

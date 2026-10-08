@@ -1,6 +1,8 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
+import { useModalBehavior } from "../lib/modal";
 import { useHistoryStore } from "../store/useHistoryStore";
 import { useDailyStore } from "../store/useDailyStore";
+import { useProfileStore } from "../store/useProfileStore";
 
 // Typecheck Wrapped — exact FIFA FUT card replica
 // Rating = BEST WPM. Tiers: BRONZE <45 | SILVER 45+ | GOLD 65+ | TOTY 85+ | ICON 100+
@@ -26,13 +28,12 @@ export function Wrapped() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [name, setName] = useState(() => {
-    try { return localStorage.getItem("typecraft_card_name") || ""; } catch { return ""; }
-  });
-
-  useEffect(() => {
-    try { localStorage.setItem("typecraft_card_name", name); } catch {}
-  }, [name]);
+  // Card name = global profile nickname (single source of truth)
+  const name = useProfileStore((s) => s.name);
+  const setName = useProfileStore((s) => s.setName);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const close = useCallback(() => setOpen(false), []);
+  useModalBehavior(open, close, dialogRef);
 
   // eslint-disable-next-line react-hooks(exhaustive-deps)
   useEffect(() => {
@@ -269,11 +270,11 @@ export function Wrapped() {
     x.strokeStyle = hexA(t.ink, 0.12); x.lineWidth = 1;
     x.beginPath(); x.moveTo(W / 2, stY - 6); x.lineTo(W / 2, stY + rowH * 2 + 52); x.stroke();
 
-    // draw stats — white values, muted labels
+    // draw stats — tier ink values, tier-appropriate labels
     const drawStat = (sx: number, sy: number, val: string, label: string) => {
       x.textAlign = "left"; x.textBaseline = "top";
       x.font = `800 46px ${mono}`;
-      x.fillStyle = "#FFFFFF";
+      x.fillStyle = t.ink;
       x.fillText(val, sx, sy);
       const vw = x.measureText(val).width;
       x.font = `600 24px ${sans}`;
@@ -299,13 +300,13 @@ export function Wrapped() {
 
   return (
     <>
-      <button onClick={() => setOpen(true)} className="h-7 px-3 rounded-md text-[11px] font-semibold tracking-wide inline-flex items-center border" style={{ background: "linear-gradient(160deg,#E8C468,#B8912F)", color: "#17131a", borderColor: "#E8C468" }}>
+      <button onClick={() => setOpen(true)} disabled={history.length === 0} title={history.length === 0 ? "Complete a test to unlock your card" : "View your Wrapped card"} className="h-7 px-3 rounded-md text-[11px] font-semibold tracking-wide inline-flex items-center border disabled:opacity-40 disabled:cursor-not-allowed" style={{ background: "linear-gradient(160deg,#E8C468,#B8912F)", color: "#17131a", borderColor: "#E8C468" }}>
         WRAPPED
       </button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setOpen(false)}>
           <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.74)" }} />
-          <div className="relative rounded-xl border overflow-hidden animate-[fadeIn_0.2s_ease]" style={{ background: "var(--bg-surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-lg)" }} onClick={(e) => e.stopPropagation()}>
+          <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Your Wrapped card" className="relative rounded-xl border overflow-hidden animate-[fadeIn_0.2s_ease]" style={{ background: "var(--bg-surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-lg)" }} onClick={(e) => e.stopPropagation()}>
             <div className="px-4 py-3 border-b flex items-center justify-between gap-3" style={{ borderColor: "var(--border)" }}>
               <input
                 value={name}
@@ -315,8 +316,8 @@ export function Wrapped() {
                 style={{ background: "var(--bg-subtle)", borderColor: "var(--border)", color: "var(--text-strong)" }}
               />
               <div className="flex gap-2 ml-auto">
-                <button onClick={() => { const a = document.createElement("a"); a.download = `typecheck-fut-${Date.now()}.png`; a.href = canvasRef.current!.toDataURL("image/png"); a.click(); }} className="h-7 px-3 rounded-md text-[11px] font-semibold" style={{ background: "var(--text-strong)", color: "var(--bg)" }}>Save PNG</button>
-                <button onClick={() => { const dd = compute(); navigator.clipboard.writeText(`${dd.best} WPM — my typecheck FUT card`).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }); }} className="h-7 px-3 rounded-md text-[11px] font-medium border" style={{ background: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-strong)" }}>{copied ? "Copied" : "Share"}</button>
+                <button onClick={() => { const cv = canvasRef.current; if (!cv) return; const a = document.createElement("a"); a.download = `typecheck-fut-${Date.now()}.png`; a.href = cv.toDataURL("image/png"); a.click(); }} className="h-7 px-3 rounded-md text-[11px] font-semibold" style={{ background: "var(--text-strong)", color: "var(--bg)" }}>Save PNG</button>
+                <button onClick={() => { const dd = compute(); navigator.clipboard.writeText(`${dd.best} WPM — my typecheck FUT card`).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }).catch(() => {}); }} className="h-7 px-3 rounded-md text-[11px] font-medium border" style={{ background: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-strong)" }}>{copied ? "Copied" : "Share"}</button>
                 <button onClick={() => setOpen(false)} className="h-7 w-7 rounded-md border text-[12px]" style={{ background: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-dim)" }}>×</button>
               </div>
             </div>

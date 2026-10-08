@@ -1,16 +1,23 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { useModalBehavior } from "../lib/modal";
 import type { Result } from "../engine/stats";
 
-type Props = { run: Result; words: string[] | null; onClose: () => void };
+type Props = { run: Result; words: string[] | null; onClose: () => void; paceOnly?: boolean };
 
-// Replay Theater — scrub through a recorded run keystroke-by-keystroke
-export function ReplayTheater({ run, words, onClose }: Props) {
+// Replay Theater — scrub through a recorded run's pace keystroke-by-keystroke.
+// NOTE: only keystroke TIMING is stored (Result.replay); the word text is
+// reconstructed, so this shows pace — not your exact errors.
+export function ReplayTheater({ run, words, onClose, paceOnly }: Props) {
   const evts = run.replay ?? [];
   const duration = evts.length ? evts[evts.length - 1] + 400 : Math.round(run.time * 1000);
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(true);
   const rafRef = useRef<number>(0);
   const lastTsRef = useRef<number>(0);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeCb = useCallback(() => onClose(), [onClose]);
+  const hasContent = !!words && evts.length > 0;
+  useModalBehavior(hasContent, closeCb, dialogRef);
 
   useEffect(() => {
     if (!playing) return;
@@ -52,11 +59,11 @@ export function ReplayTheater({ run, words, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.7)" }} />
-      <div className="relative w-full max-w-[860px] rounded-xl border overflow-hidden animate-[fadeIn_0.2s_ease]" style={{ background: "var(--bg-surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-lg)" }} onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Replay theater" className="relative w-full max-w-[860px] rounded-xl border overflow-hidden animate-[fadeIn_0.2s_ease]" style={{ background: "var(--bg-surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-lg)" }} onClick={(e) => e.stopPropagation()}>
         <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: "var(--border)" }}>
           <div>
-            <span className="text-[13px] font-semibold" style={{ color: "var(--text-strong)" }}>Replay Theater</span>
-            <span className="block text-[11px] mt-0.5" style={{ color: "var(--text-dim)" }}>{run.wpm} WPM • {run.accuracy}% • {new Date(run.timestamp).toLocaleString()}</span>
+            <span className="text-[13px] font-semibold" style={{ color: "var(--text-strong)" }}>Replay Theater{paceOnly ? <span className="font-normal" style={{ color: "var(--text-dim)" }}> • pace replay</span> : ""}</span>
+            <span className="block text-[11px] mt-0.5" style={{ color: "var(--text-dim)" }}>{run.wpm} WPM • {run.accuracy}% • {new Date(run.timestamp).toLocaleString()}{paceOnly ? " • reconstructed text shows pace only" : ""}</span>
           </div>
           <button onClick={onClose} className="w-7 h-7 rounded-md border text-[12px]" style={{ background: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-dim)" }}>×</button>
         </div>
@@ -82,7 +89,7 @@ export function ReplayTheater({ run, words, onClose }: Props) {
 
           {/* transport controls */}
           <div className="mt-5 flex items-center gap-4">
-            <button onClick={() => setPlaying((p) => !p)} className="w-10 h-10 rounded-full flex items-center justify-center text-[14px] shrink-0 shadow-md" style={{ background: "var(--primary)", color: "white" }}>{playing ? "❚❚" : "▶"}</button>
+            <button onClick={() => setPlaying((p) => !p)} className="w-10 h-10 rounded-full flex items-center justify-center text-[14px] shrink-0 shadow-md" style={{ background: "var(--primary)", color: "var(--on-primary)" }}>{playing ? "❚❚" : "▶"}</button>
             <input type="range" min={0} max={duration} value={t} onChange={(e) => { setPlaying(false); setT(Number(e.target.value)); }} className="flex-1 accent-[var(--primary)]" />
             <span className="font-mono text-[12px] shrink-0" style={{ color: "var(--text-strong)" }}>{(t / 1000).toFixed(1)}s</span>
           </div>

@@ -17,7 +17,16 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
             <div className="text-[14px] font-semibold" style={{ color: "var(--text-strong)" }}>Something went wrong — but your data is safe (local).</div>
             <div className="text-[12px] mt-2" style={{ color: "var(--text-dim)" }}>{this.state.error?.message || "Unknown error"}</div>
             <div className="flex gap-2 justify-center mt-4">
-              <button onClick={() => { localStorage.clear(); location.reload(); }} className="h-8 px-4 rounded-md text-[12px] font-medium border" style={{ background: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-strong)" }}>Clear local data & reload</button>
+              <button onClick={() => { try {
+                // Only clear this app's keys — never wipe unrelated localStorage.
+                const prefixes = ["typing-", "typecraft_", "typecheck_"];
+                const doomed: string[] = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                  const k = localStorage.key(i);
+                  if (k && prefixes.some((p) => k.startsWith(p))) doomed.push(k);
+                }
+                doomed.forEach((k) => localStorage.removeItem(k));
+              } catch {} location.reload(); }} className="h-8 px-4 rounded-md text-[12px] font-medium border" style={{ background: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-strong)" }}>Clear local data & reload</button>
               <button onClick={() => this.setState({ hasError: false })} className="h-8 px-4 rounded-md text-[12px] font-medium" style={{ background: "var(--text-strong)", color: "var(--bg)" }}>Try again</button>
             </div>
             <div className="text-[11px] mt-3" style={{ color: "var(--text-faint)" }}>No data left your browser. Report at github.com/SarthakKrishak/Typecheck/issues</div>

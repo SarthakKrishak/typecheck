@@ -23,6 +23,15 @@ export function Tooltip({ content, children, side = "top", className }: TooltipP
     }, 150);
   }, [side]);
 
+  // Touch support: tap toggles (hover doesn't exist on touch)
+  const toggleTouch = useCallback(() => {
+    if (visible) { clearTimeout(timer.current); setVisible(false); return; }
+    const r = ref.current?.getBoundingClientRect();
+    if (!r) return;
+    setPos({ x: r.left + r.width / 2, y: side === "top" ? r.top - 8 : r.bottom + 8 });
+    setVisible(true);
+  }, [side, visible]);
+
   const hide = useCallback(() => {
     clearTimeout(timer.current);
     setVisible(false);
@@ -39,6 +48,8 @@ export function Tooltip({ content, children, side = "top", className }: TooltipP
       onMouseLeave={hide}
       onFocus={show}
       onBlur={hide}
+      onClick={toggleTouch}
+      tabIndex={0}
     >
       {children}
       {visible && (

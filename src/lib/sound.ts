@@ -54,11 +54,19 @@ function preloadHtml() {
   } catch {}
 }
 
-if (typeof window !== "undefined") {
-  // warm immediately and on first interaction
+let warmStarted = false;
+function ensureWarmed() {
+  if (warmStarted || typeof window === "undefined") return;
+  warmStarted = true;
   preloadHtml();
   preloadBuffers();
+}
+
+if (typeof window !== "undefined") {
+  // Lazy warm: no AudioContext / WAV fetch until first gesture or first play()
+  // call (module import must stay side-effect free for autoplay policies).
   const warm = () => {
+    ensureWarmed();
     const c = getCtx();
     if (c && c.state === "suspended") c.resume();
     unlocked = true;
@@ -104,6 +112,7 @@ function playHtml(a: HTMLAudioElement | null) {
 
 // Satisfying mechanical — real sample, thocky, reduced volume per request
 export function playMechanical(ok: boolean) {
+  ensureWarmed();
   // try WebAudio buffer first (lowest latency, polyphonic), fallback to HTMLAudio
   const buf = ok ? keyBuf : errBuf;
   const html = ok ? htmlKey : htmlErr;
@@ -127,6 +136,7 @@ export function playMechanical(ok: boolean) {
 
 // Correct-word pop — real sample chord, reduced
 export function playCorrectWord() {
+  ensureWarmed();
   if (correctBuf && playBuffer(correctBuf, 0.48)) return;
   if (playHtml(htmlCorrect)) return;
   // fallback
@@ -151,6 +161,7 @@ export function isAudioUnlocked() { return unlocked; }
 
 // Rhythm mode metronome — soft wood-block tick, alternate pitch each beat
 export function playMetronome(accent: boolean) {
+  ensureWarmed();
   const c = getCtx(); if (!c) return;
   if (c.state === "suspended") c.resume();
   try {

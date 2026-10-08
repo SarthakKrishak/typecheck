@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { useModalBehavior } from "../lib/modal";
 import { useSettingsStore } from "../store/useSettingsStore";
 import { useHistoryStore } from "../store/useHistoryStore";
-import { useBadgeStore, BADGE_DEFS } from "../store/useBadgeStore";
+import { useProfileStore } from "../store/useProfileStore";
+import { Avatar } from "./ProfileModal";
 import { playMechanical, playCorrectWord } from "../lib/sound";
 import { Tooltip } from "./Tooltip";
 
@@ -14,17 +16,20 @@ const THEMES = [
   { id: "rose", label: "Rose", bg: "#0A0508", border: "#2E1A28", dot: "#E11D48" },
 ] as const;
 
-export function Header({ onLogoClick, activeView, onViewChange, onTour }: { onLogoClick: () => void; activeView?: string; onViewChange?: (v: string) => void; onTour?: () => void }) {
+export function Header({ onLogoClick, activeView, onViewChange, onTour, onProfile }: { onLogoClick: () => void; activeView?: string; onViewChange?: (v: string) => void; onTour?: () => void; onProfile?: () => void }) {
   const { theme, setTheme, soundOnClick, soundKeys, soundWords, toggle } = useSettingsStore();
   const best = useHistoryStore((s) => s.bestWpm());
-  const badgeLatest = useBadgeStore((s) => s.latest);
-  const badgeUnlocked = useBadgeStore((s) => s.unlocked);
+  const profileName = useProfileStore((s) => s.name);
+  const avatarId = useProfileStore((s) => s.avatarId);
   const [themeOpen, setThemeOpen] = useState(false);
   const [soundOpen, setSoundOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [stars, setStars] = useState<number | null>(null);
   const themeRef = useRef<HTMLDivElement>(null);
   const soundRef = useRef<HTMLDivElement>(null);
+  const helpRef = useRef<HTMLDivElement>(null);
+  const closeHelp = useCallback(() => setHelpOpen(false), []);
+  useModalBehavior(helpOpen, closeHelp, helpRef);
   const current = THEMES.find((t) => t.id === theme) ?? THEMES[0];
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
   const mod = isMac ? "⌘" : "Ctrl";
@@ -49,16 +54,18 @@ export function Header({ onLogoClick, activeView, onViewChange, onTour }: { onLo
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") { e.preventDefault(); const i = THEMES.findIndex((t) => t.id === theme); setTheme(THEMES[(i + 1) % THEMES.length].id as never); }
+      const t = e.target as HTMLElement | null;
+      const inField = !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+      if (e.key === "?" && !inField && !e.metaKey && !e.ctrlKey) { e.preventDefault(); setHelpOpen((v) => !v); return; }      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") { e.preventDefault(); const i = THEMES.findIndex((t) => t.id === theme); setTheme(THEMES[(i + 1) % THEMES.length].id as never); }
       if ((e.metaKey || e.ctrlKey) && e.key === "/") { e.preventDefault(); setHelpOpen((v) => !v); }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") { e.preventDefault(); toggle("soundOnClick"); }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "r") { e.preventDefault(); onViewChange?.("race"); }
+      // NOTE: Ctrl/Cmd+R intentionally NOT hijacked — browser reload must keep working.
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "e") { e.preventDefault(); onViewChange?.("analytics"); }
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); onLogoClick(); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [theme, setTheme, onLogoClick, onViewChange]);
+  }, [theme, setTheme, toggle, onLogoClick, onViewChange]);
 
   return (
     <header data-tour="header" className="sticky top-0 z-40 w-full" style={{ background: "var(--bg)", borderBottom: "1px solid var(--border)" }}>
@@ -89,31 +96,21 @@ export function Header({ onLogoClick, activeView, onViewChange, onTour }: { onLo
               </span>
             </Tooltip>
           )}
-
-          {/* Latest 3 badges */}
-          {badgeLatest.length > 0 && (
-            <div className="hidden xl:flex items-center gap-1">
-              {badgeLatest.map((id) => {
-                const def = BADGE_DEFS.find((b) => b.id === id);
-                if (!def) return null;
-                const ts = def.tier === "diamond" ? "#64b5f6" : def.tier === "gold" ? "#d4af37" : def.tier === "silver" ? "#a0a0b0" : "#c4884a";
-                return (
-                  <Tooltip key={id} content={`${def.name} — ${def.desc}`}>
-                    <span className="w-5 h-5 rounded-[4px] flex items-center justify-center text-[9px] font-mono font-bold border cursor-default" style={{ background: `${ts}18`, borderColor: `${ts}40`, color: ts }}>
-                      {def.icon}
-                    </span>
-                  </Tooltip>
-                );
-              })}
-              <span className="text-[9px] font-mono" style={{ color: "var(--text-faint)" }}>
-                {Object.keys(badgeUnlocked).length}/{BADGE_DEFS.length}
-              </span>
-            </div>
-          )}
         </div>
 
-        {/* Right — labeled controls + GitHub star */}
+        {/* Right — profile + labeled controls + GitHub star */}
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* Profile — avatar + name, opens profile hub (badges live here now) */}
+          <Tooltip content="Your profile — nickname, avatar, badges">
+            <button
+              onClick={onProfile}
+              className="h-6 pl-0.5 pr-1.5 rounded-full flex items-center gap-1.5 border"
+              style={{ background: "transparent", borderColor: "var(--border)" }}
+            >
+              <Avatar name={profileName} avatarId={avatarId} size={20} />
+              <span className="hidden lg:inline text-[11px] font-medium max-w-[90px] truncate" style={{ color: "var(--text-strong)" }}>{profileName || "You"}</span>
+            </button>
+          </Tooltip>
           {/* Sound — icon + label */}
           <div ref={soundRef} data-tour="sound" className="relative">
             <button
@@ -208,7 +205,7 @@ export function Header({ onLogoClick, activeView, onViewChange, onTour }: { onLo
         {helpOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setHelpOpen(false)}>
             <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.5)" }} />
-            <div onClick={(e) => e.stopPropagation()} className="relative w-full max-w-[440px] rounded-lg border overflow-hidden" style={{ background: "var(--bg-surface)", borderColor: "var(--border-strong)", boxShadow: "var(--shadow-lg)" }}>
+            <div ref={helpRef} role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" onClick={(e) => e.stopPropagation()} className="relative w-full max-w-[440px] rounded-lg border overflow-hidden" style={{ background: "var(--bg-surface)", borderColor: "var(--border-strong)", boxShadow: "var(--shadow-lg)" }}>
               <div className="px-4 py-3 border-b flex items-center justify-between" style={{ borderColor: "var(--border)" }}>
                 <span className="text-[12px] font-semibold" style={{ color: "var(--text-strong)" }}>Keyboard Shortcuts</span>
                 <button onClick={() => setHelpOpen(false)} className="text-[14px]" style={{ color: "var(--text-dim)" }}>×</button>
@@ -216,9 +213,9 @@ export function Header({ onLogoClick, activeView, onViewChange, onTour }: { onLo
               <div className="p-3 grid grid-cols-2 gap-x-4 text-[11px]">
                 {[
                   ["Restart test", `${mod} ↵`], ["Cycle theme", `${mod} J`],
-                  ["Toggle sound", `${mod} S`], ["Go to Race", `${mod} R`],
-                  ["Go to Analytics", `${mod} E`], ["Delete word", `${mod} ⌫`],
-                  ["This panel", `${mod} /`], ["Close", `Esc`],
+                  ["Toggle sound", `${mod} S`], ["Go to Analytics", `${mod} E`],
+                  ["Delete word", `${mod} ⌫`], ["This panel", `? or ${mod} /`],
+                  ["Close", `Esc`], ["Restart (test view)", `Enter`],
                 ].map(([l, k]) => (
                   <div key={l} className="flex items-center justify-between py-1 border-b" style={{ borderColor: "var(--border)" }}>
                     <span style={{ color: "var(--text-dim)" }}>{l}</span>

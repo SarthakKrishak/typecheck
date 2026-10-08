@@ -15,7 +15,9 @@ import { CoachInsights } from "./components/CoachInsights";
 import { ReplayTheater } from "./components/ReplayTheater";
 import { BadgesPage } from "./components/BadgesPage";
 import { useBadgeStore } from "./store/useBadgeStore";
-import { useDailyStore } from "./store/useDailyStore";
+import { useDailyStore, todayKey } from "./store/useDailyStore";
+import { useProfileStore } from "./store/useProfileStore";
+import { ProfileModal } from "./components/ProfileModal";
 import { useSettingsStore } from "./store/useSettingsStore";
 import { useHistoryStore } from "./store/useHistoryStore";
 import type { Result } from "./engine/stats";
@@ -32,6 +34,13 @@ export default function App() {
   const addResult = useHistoryStore((s) => s.addResult);
   const history = useHistoryStore((s) => s.results);
   const tour = useTour();
+  const hasOnboarded = useProfileStore((s) => s.hasOnboarded);
+  const [profileOpen, setProfileOpen] = useState(false);
+  useEffect(() => {
+    const open = () => setProfileOpen(true);
+    window.addEventListener("typecheck:open-profile" as never, open as never);
+    return () => window.removeEventListener("typecheck:open-profile" as never, open as never);
+  }, []);
 
   const startDaily = (words: string[]) => {
     setFixedWords(words);
@@ -58,6 +67,19 @@ export default function App() {
   const highContrast = useSettingsStore((s) => s.highContrast);
   const breathing = useSettingsStore((s) => s.breathing);
   useEffect(() => { document.documentElement.setAttribute("data-focus", String(focusMode)); }, [focusMode]);
+  // Focus mode: dimmed chrome must also leave the tab order / a11y tree
+  useEffect(() => {
+    const els = [
+      ...document.querySelectorAll("header nav"),
+      document.getElementById("footer-settings"),
+      ...document.querySelectorAll("body > div footer, #root footer"),
+    ].filter(Boolean) as HTMLElement[];
+    els.forEach((el) => {
+      if (focusMode) { el.setAttribute("inert", ""); el.setAttribute("aria-hidden", "true"); }
+      else { el.removeAttribute("inert"); el.removeAttribute("aria-hidden"); }
+    });
+    return () => els.forEach((el) => { el.removeAttribute("inert"); el.removeAttribute("aria-hidden"); });
+  }, [focusMode, view, result]);
   useEffect(() => { document.documentElement.setAttribute("data-dyslexia", String(dyslexia)); }, [dyslexia]);
   useEffect(() => { document.documentElement.setAttribute("data-high-contrast", String(highContrast)); }, [highContrast]);
   useEffect(() => { document.documentElement.setAttribute("data-breathing", String(breathing)); }, [breathing]);
@@ -77,8 +99,15 @@ export default function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      const isTypingField = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
-      if (e.key === "Enter" && !isTypingField) {
+      const tag = target?.tagName;
+      // Skip while typing OR while focused on any interactive control
+      // (buttons/links/selects) so Enter activates the control instead of
+      // double-firing a restart alongside the control's own click.
+      const isInteractive = !!target && (
+        tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" ||
+        tag === "BUTTON" || tag === "A" || target.isContentEditable
+      );
+      if (e.key === "Enter" && !isInteractive) {
         if (result) {
           e.preventDefault();
           restart();
@@ -87,7 +116,7 @@ export default function App() {
           e.preventDefault();
           restart();
         }
-      } else if (e.key === " " && !result && view === "test" && !isTypingField) {
+      } else if (e.key === " " && !result && view === "test" && !isInteractive) {
         // Space to focus input when idle (prevent page scroll)
         const input = document.querySelector('input[aria-label="typing input"]') as HTMLInputElement | null;
         if (input && document.activeElement !== input) {
@@ -102,9 +131,16 @@ export default function App() {
   const handleResult = (r: Result) => {
     setResult(r);
     addResult(r);
-    if (dailyActive) { setDailyDone({ wpm: r.wpm, accuracy: r.accuracy }); setDailyActive(false); }
+    // Record the daily streak FIRST so badge evaluation sees the fresh streak
+    // (DailyChallenge's own record call is idempotent and becomes a no-op).
+    let streak = useDailyStore.getState().streak;
+    if (dailyActive) {
+      setDailyDone({ wpm: r.wpm, accuracy: r.accuracy });
+      setDailyActive(false);
+      const res = useDailyStore.getState().record(todayKey(), r.wpm, r.accuracy);
+      if (res) streak = res.streak;
+    }
     // Evaluate badges
-    const streak = useDailyStore.getState().streak;
     useBadgeStore.getState().evaluate(useHistoryStore.getState().results, streak);
   };
 
@@ -134,14 +170,14 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "var(--bg)" }}>
-      <Header onLogoClick={restart} activeView={result ? "test" : view} onViewChange={(v) => { if (result) restart(); setView(v as never); if (v === "history") setTimeout(() => document.getElementById("footer-settings")?.scrollIntoView({ behavior: "smooth" }), 50); }} onTour={tour.replay} />
+      <Header onLogoClick={restart} activeView={result ? "test" : view} onViewChange={(v) => { if (result) restart(); setView(v as never); if (v === "history") setTimeout(() => document.getElementById("footer-settings")?.scrollIntoView({ behavior: "smooth" }), 50); }} onTour={tour.replay} onProfile={() => setProfileOpen(true)} />
       {focusMode && (
         <div data-focus-exit className="fixed top-3 right-3 z-40 flex items-center gap-2 animate-[fadeIn_0.2s_ease]">
           <span className="hidden sm:inline text-[11px] font-mono px-2.5 py-1 rounded-full border shadow-sm" style={{ background: "var(--bg-surface)", borderColor: "var(--border)", color: "var(--text-dim)" }}>Focus • Esc to exit</span>
           <button onClick={() => useSettingsStore.getState().toggle("focusMode")} className="h-8 px-4 rounded-full text-[12px] font-semibold shadow-md border" style={{ background: "var(--text-strong)", color: "var(--bg)", borderColor: "var(--text-strong)" }}>Exit Focus</button>
         </div>
       )}
-      <Tour open={tour.open} onClose={tour.close} onNavigate={(v) => { if (result) setResult(null); setView(v as never); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
+      {hasOnboarded && <Tour open={tour.open} onClose={tour.close} onNavigate={(v) => { if (result) setResult(null); setView(v as never); window.scrollTo({ top: 0, behavior: "smooth" }); }} onFinish={() => restart()} />}
 
       {!result && view === "test" && (
         <div className="pt-6 pb-2">
@@ -177,6 +213,8 @@ export default function App() {
       <FooterSettings />
       <HealthNudge />
       <StarPrompt />
+      {!hasOnboarded && <ProfileModal mode="onboard" open onClose={() => {}} />}
+      <ProfileModal mode="profile" open={profileOpen} onClose={() => setProfileOpen(false)} />
 
       {/* ── Footer — multi-column SaaS + built-by strip ── */}
       <footer className="border-t mt-8" style={{ borderColor: "var(--border)", background: "var(--bg-subtle)" }}>
@@ -254,7 +292,7 @@ export default function App() {
             </div>
             <div className="flex items-center gap-4 text-[11px] font-mono" style={{ color: "var(--text-faint)" }}>
               <span className="hidden sm:inline-flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full" style={{ background: "#22C55E" }} /> Operational</span>
-              <span className="flex items-center gap-1"><span className="kbd">Tab</span> + <span className="kbd">Enter</span></span>
+              <span className="flex items-center gap-1"><span className="kbd">Enter</span><span style={{ color: "var(--text-faint)" }}>restart</span></span>
               <a href="https://github.com/SarthakKrishak/Typecraft" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 hover:underline" style={{ color: "var(--text-dim)" }}>
                 ★ Star on GitHub
               </a>
@@ -299,9 +337,9 @@ function AnalyticsView({ history }: { history: Result[] }) {
           )}
           {replayable.length > 0 && (
             <button
-              onClick={() => setTheaterOpen(true)}
+              onClick={() => { if (!theaterRun) setReplayRunLocal(replayable[0]); setTheaterOpen(true); }}
               className="h-7 px-3 rounded-md text-[11px] font-semibold"
-              style={{ background: "var(--primary)", color: "white" }}
+              style={{ background: "var(--primary)", color: "var(--on-primary)" }}
             >
               ▶ Replay Theater
             </button>
@@ -311,7 +349,7 @@ function AnalyticsView({ history }: { history: Result[] }) {
         <span className="text-[11px] font-mono px-2 py-1 rounded-md border" style={{ background: "var(--bg-muted)", borderColor: "var(--border)", color: "var(--text-dim)" }}>{history.length} runs • {Math.round(totalTime)}s typed</span>
       </div>
       {theaterOpen && theaterRun && (
-        <ReplayTheater run={theaterRun} words={reconstructWords(theaterRun)} onClose={() => setTheaterOpen(false)} />
+        <ReplayTheater run={theaterRun} words={reconstructWords(theaterRun)} paceOnly onClose={() => setTheaterOpen(false)} />
       )}
 
       {/* Hero — current level, big & readable */}
@@ -553,10 +591,10 @@ function AnalyticsView({ history }: { history: Result[] }) {
         {showCalc && (
           <div className="px-4 py-4 space-y-3 text-[12px] leading-relaxed">
             {[
-              ["WPM", "(correct characters ÷ 5) ÷ (time in seconds ÷ 60)", "Counts only correctly typed characters, including spaces between correct words. This is the industry-standard net WPM — same formula Monkeytype and 10FastFingers use."],
-              ["Raw WPM", "(all typed characters ÷ 5) ÷ (time in seconds ÷ 60)", "Counts every character you typed, including incorrect ones. The gap between WPM and Raw shows how much speed you lose to errors."],
+              ["WPM", "(correct characters ÷ 5) ÷ (time in seconds ÷ 60)", "Counts only correctly typed characters, including spaces between correct words. This is the industry-standard net WPM — same formula Monkeytype and 10FastFingers use. Word tests end the instant you type the last letter (no trailing space); time tests clamp to the exact duration and count your in-progress word."],
+              ["Raw WPM", "(every keystroke ÷ 5) ÷ (time in seconds ÷ 60)", "Counts every keystroke you made — including spaces and characters you later fixed with backspace. The gap between WPM and Raw shows how much speed you lose to errors and corrections."],
               ["Accuracy", "correct ÷ (correct + incorrect + extra + missed) × 100", "Missed characters (skipped words) count against you. Extra characters you typed beyond the target also reduce accuracy."],
-              ["Consistency", "(1 − std-dev ÷ mean) × 100 of per-second WPM", "Measures how even your speed was. A score of 90%+ means you type at a very steady pace. Zero-speed seconds (before you start) are excluded."],
+              ["Consistency", "(1 − std-dev ÷ mean) × 100 of per-second raw WPM", "Measures how even your speed was, using gross speed each second (same basis as Monkeytype). A score of 90%+ means you type at a very steady pace. Zero-speed seconds (before you start) are excluded."],
               ["Burst", "highest single-second WPM", "Your fastest moment during the test. Compare it to your average — a big gap means you sprint and stall."],
             ].map(([name, formula, desc]) => (
               <div key={name} className="flex gap-3">

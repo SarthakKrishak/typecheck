@@ -5,7 +5,7 @@ import type { Result } from "../engine/stats";
 import { generateWords } from "../data/words";
 import { QUOTES } from "../data/quotes";
 import { playMechanical, playCorrectWord, playMetronome } from "../lib/sound";
-import { emitTypingTick } from "../lib/events";
+import { emitTypingTick, emitLiveStats } from "../lib/events";
 import { useDeckStore } from "../store/useDeckStore";
 import { useHistoryStore } from "../store/useHistoryStore";
 import { HandGuide } from "./HandGuide";
@@ -18,6 +18,34 @@ export function TypingArea({ onResult, keyTrigger, drillWords, onDrillDone, fixe
   const wordsRef = useRef<HTMLDivElement>(null);
   const caretRef = useRef<HTMLDivElement>(null);
   const ghostRef = useRef<HTMLDivElement>(null);
+
+  // Word-list factory — memoized on drill/fixed words so reset() below always
+  // sees fresh props (previously a stale closure dropped Daily Challenge words).
+  const gen = useCallback((s: typeof settings) => {
+    if (fixedWords && fixedWords.length > 0) return [...fixedWords];
+    if (drillWords && drillWords.length > 0) return [...drillWords];
+    if (s.mode === "quote") return QUOTES[Math.floor(Math.random() * QUOTES.length)].text.split(" ");
+    if (s.mode === "custom") {
+      const t = (s.customText || "").trim();
+      if (!t) return ["paste", "your", "text", "in", "preferences", "to", "start", "custom", "test"];
+      return t.split(/\s+/).filter(Boolean);
+    }
+    if (s.mode === "zen") return generateWords(200, { punctuation: s.punctuation, numbers: s.numbers, code: s.language === "code" });
+    const count = s.mode === "words" ? s.words : 120;
+    const base = generateWords(count, { punctuation: s.punctuation, numbers: s.numbers, code: s.language === "code" });
+    const deck = useDeckStore.getState();
+    if (deck.enabled && deck.words.length > 0 && (s.mode === "time" || s.mode === "words")) {
+      const injectCount = Math.min(deck.words.length, Math.floor(count * 0.3));
+      const shuffledDeck = [...deck.words].sort(() => Math.random() - 0.5).slice(0, injectCount);
+      const out = [...base];
+      for (let i = 0; i < injectCount; i++) {
+        const idx = Math.floor(Math.random() * out.length);
+        out[idx] = shuffledDeck[i % shuffledDeck.length];
+      }
+      return out;
+    }
+    return base;
+  }, [fixedWords, drillWords]);
 
   const [words, setWords] = useState<string[]>(() => gen(settings));
   const [input, setInput] = useState("");
@@ -36,6 +64,10 @@ export function TypingArea({ onResult, keyTrigger, drillWords, onDrillDone, fixe
   const [incorrectChars, setIncorrectChars] = useState(0);
   const [extraCount, setExtraCount] = useState(0);
   const [missedCount, setMissedCount] = useState(0);
+  // Every accepted keystroke (chars + committing spaces), INCLUDING chars later
+  // erased with backspace — this is what raw WPM is computed from, matching
+  // Monkeytype / 10FastFingers gross-WPM convention.
+  const [keystrokes, setKeystrokes] = useState(0);
   const [wordStats, setWordStats] = useState<{ c: number; ic: number; ex: number; miss: number }[]>([]);
   const [capsOn, setCapsOn] = useState(false);
   const [githubUrl, setGithubUrl] = useState("");
@@ -68,14 +100,28 @@ export function TypingArea({ onResult, keyTrigger, drillWords, onDrillDone, fixe
       const fetchUrl = isBlob
         ? url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
         : url;
-      const res = await fetch(fetchUrl);
+      // Hardening: timeout, size cap (check before buffering a huge/binary file)
+      const ctrl = new AbortController();
+      const timeout = window.setTimeout(() => ctrl.abort(), 10000);
+      let res: Response;
+      try {
+        res = await fetch(fetchUrl, { signal: ctrl.signal });
+      } finally { window.clearTimeout(timeout); }
       if (!res.ok) throw new Error(`Fetch failed (${res.status})`);
+      const len = res.headers.get("content-length");
+      if (len && Number(len) > 200_000) throw new Error("File too large (max ~200KB)");
+      const ctype = res.headers.get("content-type") || "";
+      if (ctype && /^(audio|video|image|font)\//.test(ctype) && !/text|json|javascript|svg/.test(ctype)) throw new Error("Not a text file");
       const text = await res.text();
-      if (!text) throw new Error("File is empty");
-      settings.setCustomText(text.slice(0, 4000));
+      if (!text.trim()) throw new Error("File is empty");
+      if (text.length > 200_000) throw new Error("File too large (max ~200KB)");
+      // Strip null bytes / control chars that break the typing engine
+      const clean = text.replace(/\0/g, "").slice(0, 4000);
+      settings.setCustomText(clean);
       setGithubUrl("");
     } catch (e) {
-      setGithubError((e as Error).message);
+      const msg = (e as Error).message;
+      setGithubError(/abort/i.test(msg) ? "Fetch timed out (10s)" : msg);
     } finally { setFetchingCode(false); }
   };
 
@@ -95,40 +141,14 @@ export function TypingArea({ onResult, keyTrigger, drillWords, onDrillDone, fixe
   const timeLimit = settings.mode === "time" ? settings.time : 0;
   const wordsLimit = settings.mode === "words" ? settings.words : 0;
 
-  function gen(s: typeof settings) {
-    if (fixedWords && fixedWords.length > 0) return [...fixedWords];
-    if (drillWords && drillWords.length > 0) return [...drillWords];
-    if (s.mode === "quote") return QUOTES[Math.floor(Math.random() * QUOTES.length)].text.split(" ");
-    if (s.mode === "custom") {
-      const t = (s.customText || "").trim();
-      if (!t) return ["paste", "your", "text", "in", "preferences", "to", "start", "custom", "test"];
-      return t.split(/\s+/).filter(Boolean);
-    }
-    if (s.mode === "zen") return generateWords(200, { punctuation: s.punctuation, numbers: s.numbers, code: s.language === "code" });
-    const count = s.mode === "words" ? s.words : 120;
-    const base = generateWords(count, { punctuation: s.punctuation, numbers: s.numbers, code: s.language === "code" });
-    const deck = useDeckStore.getState();
-    if (deck.enabled && deck.words.length > 0 && (s.mode === "time" || s.mode === "words")) {
-      const injectCount = Math.min(deck.words.length, Math.floor(count * 0.3));
-      const shuffledDeck = [...deck.words].sort(() => Math.random() - 0.5).slice(0, injectCount);
-      const out = [...base];
-      for (let i = 0; i < injectCount; i++) {
-        const idx = Math.floor(Math.random() * out.length);
-        out[idx] = shuffledDeck[i % shuffledDeck.length];
-      }
-      return out;
-    }
-    return base;
-  }
-
   const reset = useCallback(() => {
     const newWords = gen(useSettingsStore.getState());
     setWords(newWords); setInput(""); setWordIdx(0); setHistory([]); setExtraChars([]); setWordStats([]);
     charErrorRef.current = {}; bigramErrorRef.current = {}; replayRef.current = [];
     setStartTime(null); setElapsed(0); setWpm(0); setRaw(0); setWpmHistory([]); setRawHistory([]); setFinished(false);
-    setCorrectChars(0); setIncorrectChars(0); setExtraCount(0); setMissedCount(0);
+    setCorrectChars(0); setIncorrectChars(0); setExtraCount(0); setMissedCount(0); setKeystrokes(0);
     setTimeout(() => inputRef.current?.focus(), 10);
-  }, [drillWords]);
+  }, [gen]);
 
   useEffect(() => { reset(); }, [keyTrigger, settings.mode, settings.time, settings.words, settings.language, settings.punctuation, settings.numbers, settings.customText, reset]);
 
@@ -149,11 +169,13 @@ export function TypingArea({ onResult, keyTrigger, drillWords, onDrillDone, fixe
   const correctCharsRef = useRef(0);
   const incorrectCharsRef = useRef(0);
   const extraCountRef = useRef(0);
+  const keystrokeRef = useRef(0);
   const wpmHistoryLenRef = useRef(0);
   const finishRef = useRef<(e?: number) => void>(() => {});
   correctCharsRef.current = correctChars;
   incorrectCharsRef.current = incorrectChars;
   extraCountRef.current = extraCount;
+  keystrokeRef.current = keystrokes;
   wpmHistoryLenRef.current = wpmHistory.length;
 
   useEffect(() => {
@@ -163,7 +185,7 @@ export function TypingArea({ onResult, keyTrigger, drillWords, onDrillDone, fixe
       setElapsed(e);
       const el = Math.floor(e);
       const curWpm = calcWpm(correctCharsRef.current, e);
-      const curRaw = calcRaw(correctCharsRef.current + incorrectCharsRef.current + extraCountRef.current, e);
+      const curRaw = calcRaw(keystrokeRef.current, e);
       setWpm(curWpm); setRaw(curRaw);
       if (el > 0 && wpmHistoryLenRef.current < el) {
         setWpmHistory((h) => [...h, curWpm]); setRawHistory((h) => [...h, curRaw]);
@@ -171,14 +193,17 @@ export function TypingArea({ onResult, keyTrigger, drillWords, onDrillDone, fixe
         emitTypingTick(1);
       }
       if (settings.mode === "time" && e >= timeLimit) finishRef.current(e);
-      window.dispatchEvent(new CustomEvent("typecraft-live", { detail: { wpm: curWpm, raw: curRaw, acc: liveAccRef.current, left: settings.mode === "time" ? Math.max(0, Math.ceil(timeLimit - e)) : null } }));
+      emitLiveStats({ wpm: curWpm, raw: curRaw, acc: liveAccRef.current, left: settings.mode === "time" ? Math.max(0, Math.ceil(timeLimit - e)) : null });
     }, 100);
     return () => clearInterval(id);
   }, [startTime, finished, timeLimit, settings.mode]);
 
   const finish = (finalElapsed?: number) => {
     if (finished) return;
-    const e = finalElapsed ?? (startTime ? (Date.now() - startTime) / 1000 : 0);
+    let e = finalElapsed ?? (startTime ? (Date.now() - startTime) / 1000 : 0);
+    // Clamp to the test duration in time mode — the 100ms ticker overshoots the
+    // limit, which would systematically deflate final WPM vs other platforms.
+    if (settings.mode === "time") e = Math.min(e, timeLimit);
     const finalMissed = missedCount + (() => {
       let missed = 0;
       if (wordIdx < words.length) {
@@ -188,23 +213,34 @@ export function TypingArea({ onResult, keyTrigger, drillWords, onDrillDone, fixe
       }
       return missed;
     })();
-    const finalWpm = calcWpm(correctChars, e);
-    const finalRaw = calcRaw(correctChars + incorrectChars + extraCount, e);
-    const acc = calcAccuracy(correctChars, incorrectChars, extraCount, finalMissed);
-    const consistency = calcConsistency(wpmHistory.length ? wpmHistory : [finalWpm]);
-    const burst = Math.max(0, ...wpmHistory, finalWpm);
+    const finalRaw = calcRaw(keystrokes, e);
+    // Score the uncommitted in-progress word (time/zen end mid-word).
+    // Monkeytype counts these chars — discarding them deflates WPM by ~1-2.
+    let scoredCorrect = correctChars, scoredIncorrect = incorrectChars;
+    if (input.length > 0 && wordIdx < words.length) {
+      const cur = words[wordIdx] ?? "";
+      for (let i = 0; i < input.length; i++) {
+        if (i < cur.length && input[i] === cur[i]) scoredCorrect++;
+        else scoredIncorrect++;
+      }
+    }
+    const finalWpmScored = calcWpm(scoredCorrect, e);
+    const acc = calcAccuracy(scoredCorrect, scoredIncorrect, extraCount, finalMissed);
+    const consistency = calcConsistency(rawHistory.length ? rawHistory : [finalRaw]);
+    const burst = Math.max(0, ...wpmHistory, finalWpmScored);
     const charEntries = Object.entries(charErrorRef.current).sort((a, b) => b[1] - a[1]);
     const weakKeys = charEntries.slice(0, 3).map(([k]) => k);
     const bigramEntries = Object.entries(bigramErrorRef.current).sort((a, b) => b[1] - a[1]);
     const weakBigrams = bigramEntries.slice(0, 3).map(([k]) => k);
     const result: Result = {
-      id: String(Date.now()), wpm: finalWpm, rawWpm: finalRaw, accuracy: acc,
-      correctChars, incorrectChars, extraChars: extraCount, missedChars: finalMissed,
+      id: String(Date.now()), wpm: finalWpmScored, rawWpm: finalRaw, accuracy: acc,
+      correctChars: scoredCorrect, incorrectChars: scoredIncorrect, extraChars: extraCount, missedChars: finalMissed,
+      keystrokes,
       correctWords: history.filter((w, i) => w === words[i]).length,
       incorrectWords: history.filter((w, i) => w !== words[i]).length,
       time: Math.round(e * 10) / 10, mode: settings.mode, language: settings.language,
       punctuation: settings.punctuation, numbers: settings.numbers,
-      consistency, burst, wpmHistory: wpmHistory.length ? [...wpmHistory, finalWpm] : [finalWpm],
+      consistency, burst, wpmHistory: wpmHistory.length ? [...wpmHistory, finalWpmScored] : [finalWpmScored],
       rawHistory: rawHistory.length ? [...rawHistory, finalRaw] : [finalRaw],
       timestamp: Date.now(), textLength: words.join(" ").length,
       weakKeys, weakBigrams, charErrorMap: { ...charErrorRef.current }, bigramErrorMap: { ...bigramErrorRef.current },
@@ -217,13 +253,18 @@ export function TypingArea({ onResult, keyTrigger, drillWords, onDrillDone, fixe
 
   const handleInput = (val: string) => {
     if (finished) return;
-    if (startTime === null) setStartTime(Date.now());
+    // Stray leading space: ignore completely — no clock, no keystroke.
+    // (Starting the timer here would deflate WPM on every accidental tap.)
+    if (val.endsWith(" ") && input.length === 0) { setInput(""); return; }
+    const now0 = Date.now();
+    if (startTime === null) setStartTime(now0);
+    const t0 = startTime ?? now0;
     // sound on keypress (per char) — mechanical, no delay, static import
     if (val.length > input.length) {
       const last = val[val.length - 1];
       const isSpace = last === " ";
       // replay recording — ms offset of every keystroke (cap 1200 events)
-      if (startTime !== null && replayRef.current.length < 1200) replayRef.current.push(Math.round(Date.now() - startTime));
+      if (replayRef.current.length < 1200) replayRef.current.push(Math.round(now0 - t0));
       if (!isSpace) {
         const cur = words[wordIdx] ?? "";
         const idx = val.length - 1;
@@ -233,7 +274,6 @@ export function TypingArea({ onResult, keyTrigger, drillWords, onDrillDone, fixe
       }
     }
     if (val.endsWith(" ")) {
-      if (input.length === 0) { setInput(""); return; }
       if (settings.stopOnWord) {
         const cur = words[wordIdx] ?? ""; let err = false;
         for (let i = 0; i < cur.length; i++) if ((input[i] ?? "") !== cur[i]) { err = true; break; }
@@ -261,21 +301,45 @@ export function TypingArea({ onResult, keyTrigger, drillWords, onDrillDone, fixe
         }
       }
       setCorrectChars((x) => x + c); setIncorrectChars((x) => x + ic); setExtraCount((x) => x + ex); setMissedCount((x) => x + miss);
+      setKeystrokes((k) => k + 1); // the committing space is a keystroke too
       setWordStats((ws) => [...ws, { c, ic, ex, miss }]); setCorrectChars((x) => x + 1);
       // satisfying sound only when whole word is correct — separate toggle, no delay
       const isWordCorrect = c === target.length && ic === 0 && ex === 0 && miss === 0;
       if (isWordCorrect) playWordCorrect();
       setHistory((h) => [...h, typed]); setExtraChars((e) => { const cpy = [...e]; cpy[wordIdx] = typed.slice(target.length); return cpy; });
       const n = wordIdx + 1; setWordIdx(n); setInput("");
-      if (settings.mode === "words" && n >= wordsLimit) { const e = startTime ? (Date.now() - startTime) / 1000 : 0; setTimeout(() => finish(e), 0); }
-      if (settings.mode === "quote" && n >= words.length) { const e = startTime ? (Date.now() - startTime) / 1000 : 0; setTimeout(() => finish(e), 0); }
-      if (settings.mode === "custom" && n >= words.length) { const e = startTime ? (Date.now() - startTime) / 1000 : 0; setTimeout(() => finish(e), 0); }
+      // NOTE: must go through finishRef — the render-scope `finish` closes over
+      // stale counters missing this final word; ref always points at the latest.
+      if (settings.mode === "words" && n >= wordsLimit) { const e = startTime ? (Date.now() - startTime) / 1000 : 0; setTimeout(() => finishRef.current(e), 0); }
+      if (settings.mode === "quote" && n >= words.length) { const e = startTime ? (Date.now() - startTime) / 1000 : 0; setTimeout(() => finishRef.current(e), 0); }
+      if (settings.mode === "custom" && n >= words.length) { const e = startTime ? (Date.now() - startTime) / 1000 : 0; setTimeout(() => finishRef.current(e), 0); }
       if (n > words.length - 20 && settings.mode !== "custom" && settings.mode !== "quote") setWords((w) => [...w, ...generateWords(40, { punctuation: settings.punctuation, numbers: settings.numbers, code: settings.language === "code" })]);
       return;
     }
-    setInput(val);
+    // Plain typing (no commit): accept up to 8 overflow chars, and count every
+    // accepted char — including ones later erased — for gross (raw) WPM.
     const cur = words[wordIdx] ?? "";
-    if (val.length > cur.length + 8) setInput(val.slice(0, cur.length + 8));
+    const next = val.length > cur.length + 8 ? val.slice(0, cur.length + 8) : val;
+    if (next.length > input.length) setKeystrokes((k) => k + (next.length - input.length));
+    // Monkeytype parity: words/quote/custom end the moment the last letter is
+    // typed — no trailing space needed, and none counted. (The old behavior
+    // demanded an extra phantom space: +1 char AND extra clock time.)
+    if (
+      (settings.mode === "words" || settings.mode === "quote" || settings.mode === "custom") &&
+      cur.length > 0 && wordIdx === words.length - 1 && next === cur
+    ) {
+      setCorrectChars((x) => x + cur.length);
+      setWordStats((ws) => [...ws, { c: cur.length, ic: 0, ex: 0, miss: 0 }]);
+      setHistory((h) => [...h, next]);
+      setExtraChars((e) => { const cpy = [...e]; cpy[wordIdx] = ""; return cpy; });
+      setWordIdx(wordIdx + 1);
+      setInput("");
+      playWordCorrect();
+      const e = startTime ? (Date.now() - startTime) / 1000 : 0;
+      setTimeout(() => finishRef.current(e), 0);
+      return;
+    }
+    setInput(next);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -437,7 +501,7 @@ export function TypingArea({ onResult, keyTrigger, drillWords, onDrillDone, fixe
     caret.style.top = `${top}px`;
     caret.style.width = `${w}px`;
     caret.style.height = `${h}px`;
-  }, [wordIdx, input, words, settings.caretStyle, isFocused, startTime, finished, extraChars]);
+  }, [wordIdx, input, words, settings.caretStyle, isFocused, startTime, finished]);
 
   useLayoutEffect(() => { updateCaret(); }, [updateCaret]);
   useEffect(() => {
@@ -512,7 +576,7 @@ export function TypingArea({ onResult, keyTrigger, drillWords, onDrillDone, fixe
 
   const liveElapsed = startTime ? (finished ? elapsed : (Date.now() - startTime) / 1000) : 0;
   const timeLeft = Math.max(0, Math.ceil(timeLimit - liveElapsed));
-  const progress = settings.mode === "time" ? Math.min(100, (liveElapsed / timeLimit) * 100) : settings.mode === "words" ? (wordIdx / wordsLimit) * 100 : (wordIdx / Math.max(1, words.length)) * 100;
+  const progress = Math.max(0, Math.min(100, settings.mode === "time" ? (liveElapsed / timeLimit) * 100 : settings.mode === "words" ? (wordIdx / Math.max(1, wordsLimit)) * 100 : (wordIdx / Math.max(1, words.length)) * 100));
   const liveAcc = correctChars + incorrectChars + extraCount > 0 ? Math.round((correctChars / (correctChars + incorrectChars + extraCount)) * 100) : 100;
   const liveAccRef = useRef(liveAcc);
   liveAccRef.current = liveAcc;
@@ -535,7 +599,7 @@ export function TypingArea({ onResult, keyTrigger, drillWords, onDrillDone, fixe
           <div className="text-[11px] font-semibold tracking-widest uppercase" style={{ color: "var(--text-dim)" }}>Your-Code Typing — paste code or GitHub URL</div>
           <div className="flex gap-2">
             <input value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} placeholder="https://github.com/user/repo/blob/main/file.ts" className="flex-1 h-8 rounded-md border px-3 text-[12px] font-mono" style={{ background: "var(--bg-subtle)", borderColor: githubError ? "var(--danger)" : "var(--border)", color: "var(--text-strong)" }} />
-            <button onClick={fetchGithub} disabled={fetchingCode || !githubUrl.trim()} className="h-8 px-3 rounded-md text-[12px] font-medium border disabled:opacity-50" style={{ background: "var(--primary)", color: "white", borderColor: "var(--primary)" }}>{fetchingCode ? "..." : "Fetch"}</button>
+            <button onClick={fetchGithub} disabled={fetchingCode || !githubUrl.trim()} className="h-8 px-3 rounded-md text-[12px] font-medium border disabled:opacity-50" style={{ background: "var(--primary)", color: "var(--on-primary)", borderColor: "var(--primary)" }}>{fetchingCode ? "..." : "Fetch"}</button>
           </div>
           {githubError && <div className="text-[11px] px-2 py-1 rounded-md border" style={{ background: "color-mix(in srgb, var(--danger) 8%, transparent)", borderColor: "var(--danger)", color: "var(--danger)" }}>{githubError}</div>}
           <textarea
@@ -575,6 +639,9 @@ export function TypingArea({ onResult, keyTrigger, drillWords, onDrillDone, fixe
             </span>
           )}
           <button onClick={reset} className="h-7 px-2.5 rounded-md text-[12px] font-medium border" style={{ background: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-dim)" }}>Restart</button>
+          {settings.mode === "zen" && startTime && !finished && (
+            <button onClick={() => finishRef.current((Date.now() - (startTime ?? Date.now())) / 1000)} className="h-7 px-2.5 rounded-md text-[12px] font-semibold" style={{ background: "var(--primary)", color: "var(--on-primary)" }}>Finish</button>
+          )}
         </div>
       </div>
 
@@ -585,7 +652,7 @@ export function TypingArea({ onResult, keyTrigger, drillWords, onDrillDone, fixe
         <span>
           <span style={{ color: correctChars ? "var(--text-strong)" : "var(--text-dim)" }}>{correctChars} correct</span> · <span style={{ color: incorrectChars ? "var(--danger)" : "var(--text-dim)" }}>{incorrectChars} incorrect</span> · <span style={{ color: extraCount ? "var(--danger)" : "var(--text-dim)" }}>{extraCount} extra</span> · <span style={{ color: missedCount ? "var(--danger)" : "var(--text-dim)" }}>{missedCount} missed</span>
         </span>
-        <span className="hidden sm:inline">burst {wpmHistory.length ? Math.max(...wpmHistory, wpm) : wpm} · {liveAcc}% acc</span>
+        <span className="hidden sm:inline">burst {wpmHistory.length ? Math.max(...wpmHistory, wpm) : wpm} · {liveAcc}% acc{settings.mode === "zen" ? " · zen is endless — press Finish when done" : ""}</span>
       </div>
 
       <div onClick={() => inputRef.current?.focus()} className="relative cursor-text select-none">
@@ -688,7 +755,7 @@ export function TypingArea({ onResult, keyTrigger, drillWords, onDrillDone, fixe
 
       <div className="flex flex-wrap items-center justify-between gap-3 mt-8 pt-4 border-t text-[11px]" style={{ borderColor: "var(--border)", color: "var(--text-dim)" }}>
         <div className="flex items-center gap-2 font-mono">
-          <span className="kbd">Tab</span> <span>+</span> <span className="kbd">Enter</span> <span>restart</span>
+          <span className="kbd">Enter</span> <span>restart</span>
           <span className="hidden sm:inline" style={{ color: "var(--border-strong)" }}>·</span>
           <span className="hidden sm:inline-flex items-center gap-1"><span className="kbd">Ctrl</span> + <span className="kbd">⌫</span> delete word</span>
         </div>

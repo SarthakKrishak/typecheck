@@ -46,10 +46,17 @@ export function HealthNudge() {
     else setShow(false);
   };
 
+  useEffect(() => {
+    if (!show) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setShow(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [show ]);
+
   if (!show) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-40 max-w-[360px] rounded-xl border shadow-lg overflow-hidden animate-[fadeIn_0.3s_ease]" style={{ background: "var(--bg-surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-lg)" }}>
+    <div className="fixed bottom-4 right-4 z-40 max-w-[calc(100vw-2rem)] sm:max-w-[360px] rounded-xl border shadow-lg overflow-hidden animate-[fadeIn_0.3s_ease]" style={{ background: "var(--bg-surface)", borderColor: "var(--border)", boxShadow: "var(--shadow-lg)" }} role="status" aria-live="polite">
       <div className="px-4 py-3">
         <div className="text-[12px] font-semibold flex items-center gap-2" style={{ color: "var(--text-strong)" }}>
           <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: "var(--success)" }} /> Health nudge
@@ -58,7 +65,7 @@ export function HealthNudge() {
           You’ve typed for <span style={{ color: "var(--text-strong)", fontWeight: 600 }}>{Math.round(total / 60)} min</span> total. Take 20s to look away (20-20-20) and stretch wrists. Pomodoro 25/5 keeps you fresh.
         </div>
         <div className="flex gap-2 mt-3">
-          <button onClick={() => dismiss(false)} className="flex-1 h-7 rounded-md text-[11px] font-medium" style={{ background: "var(--primary)", color: "white" }}>Stretch now (20s)</button>
+          <button onClick={() => dismiss(false)} className="flex-1 h-7 rounded-md text-[11px] font-medium" style={{ background: "var(--primary)", color: "var(--on-primary)" }}>Stretch now (20s)</button>
           <button onClick={() => dismiss(true)} className="h-7 px-3 rounded-md text-[11px] font-medium border" style={{ background: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-dim)" }}>Snooze 15m</button>
         </div>
       </div>

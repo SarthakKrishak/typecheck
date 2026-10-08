@@ -26,11 +26,18 @@ export function StarPrompt() {
     setVisible(false);
   };
 
+  useEffect(() => {
+    if (!visible) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") dismiss(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
   if (!visible || dismissed) return null;
 
   return (
     <div
-      className="fixed bottom-4 left-4 z-40 max-w-[320px] rounded-lg border overflow-hidden animate-[fadeIn_0.3s_ease]"
+      className="fixed bottom-4 left-4 z-40 max-w-[calc(100vw-2rem)] sm:max-w-[320px] rounded-lg border overflow-hidden animate-[fadeIn_0.3s_ease]"
       style={{ background: "var(--bg-surface)", borderColor: "var(--border-strong)", boxShadow: "var(--shadow-lg)" }}
     >
       <div className="px-4 py-3.5">

@@ -41,6 +41,7 @@ function buildInsights(history: Result[]): string[] {
 }
 
 function fingerForKey(k: string): string {
+  if (k === " ") return "thumbs";
   if ("qaz".includes(k)) return "left pinky";
   if ("wsx".includes(k)) return "left ring";
   if ("edc".includes(k)) return "left middle";
@@ -48,7 +49,8 @@ function fingerForKey(k: string): string {
   if ("yhnujm".includes(k)) return "right index";
   if ("ik,".includes(k)) return "right middle";
   if ("ol.".includes(k)) return "right ring";
-  return "right pinky";
+  if ("p;/".includes(k)) return "right pinky";
+  return "thumbs"; // numbers / punctuation — thumb or reach, not a pinky fault
 }
 
 export function CoachInsights() {

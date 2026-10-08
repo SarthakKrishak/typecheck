@@ -17,10 +17,11 @@ export type Result = {
   language: Language;
   punctuation: boolean;
   numbers: boolean;
-  consistency: number; // 0-100, CV-based
+  consistency: number; // 0-100, CV-based on RAW per-second WPM (Monkeytype convention)
   burst: number; // peak WPM in history
   wpmHistory: number[]; // per-second net WPM
   rawHistory: number[]; // per-second gross WPM
+  keystrokes: number; // every accepted keystroke incl. spaces & later-corrected chars (drives raw WPM)
   timestamp: number;
   textLength: number;
   weakKeys?: string[];
@@ -39,7 +40,9 @@ export function calcWpm(correctChars: number, elapsedSec: number): number {
   return Math.round(wpm);
 }
 
-// Gross / Raw WPM — all typed chars /5 / minutes
+// Gross / Raw WPM — EVERY accepted keystroke /5 / minutes, including spaces and
+// chars you later corrected with backspace (Monkeytype / 10FastFingers convention).
+// Pass the cumulative keystroke count, not the committed-char total.
 export function calcRaw(totalTyped: number, elapsedSec: number): number {
   if (elapsedSec <= 0 || totalTyped <= 0) return 0;
   const mins = elapsedSec / 60;
@@ -56,7 +59,8 @@ export function calcAccuracy(correct: number, incorrect: number, extra: number, 
   return Math.round(acc * 100) / 100;
 }
 
-// Consistency — 1 - coefficient of variation (std/mean), as in Monkeytype
+// Consistency — 1 - coefficient of variation (std/mean) of per-second RAW WPM,
+// as in Monkeytype. Raw (not net) is used so error bursts show as unevenness.
 // Sample 1s WPM history, ignore zeros at start
 export function calcConsistency(wpmHistory: number[]): number {
   const filtered = wpmHistory.filter((v) => v > 0);

@@ -191,11 +191,11 @@ export function FooterSettings() {
               {history.length > 0 && (
                 <button
                   onClick={() => {
-                    const header = "wpm,raw,accuracy,time,mode,language,punctuation,numbers,timestamp\n";
-                    const rows = history.map((r) => `${r.wpm},${r.rawWpm},${r.accuracy},${r.time},${r.mode},${r.language},${r.punctuation},${r.numbers},${new Date(r.timestamp).toISOString()}`).join("\n");
+                    const header = "wpm,raw,accuracy,time,mode,language,punctuation,numbers,keystrokes,timestamp\n";
+                    const rows = history.map((r) => `${r.wpm},${r.rawWpm},${r.accuracy},${r.time},${r.mode},${r.language},${r.punctuation},${r.numbers},${r.keystrokes ?? r.correctChars + r.incorrectChars + r.extraChars},${new Date(r.timestamp).toISOString()}`).join("\n");
                     const blob = new Blob([header + rows], { type: "text/csv" });
                     const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a"); a.href = url; a.download = "typecraft-history.csv"; a.click(); URL.revokeObjectURL(url);
+                    const a = document.createElement("a"); a.href = url; a.download = "typecheck-history.csv"; a.click(); URL.revokeObjectURL(url);
                   }}
                   className="text-[11px] font-medium px-2 py-1 rounded-md border"
                   style={{ background: "var(--bg-card)", borderColor: "var(--border)", color: "var(--text-dim)" }}

@@ -1,8 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
-    { "source": "/overlay", "destination": "/" },
-    { "source": "/((?!assets|.*\\.(js|css|png|svg|ico|wav|webmanifest|xml|txt)).*)", "destination": "/" }
+    { "source": "/overlay", "destination": "/" }
   ],
   "headers": [
     {

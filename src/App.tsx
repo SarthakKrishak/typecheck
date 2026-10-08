@@ -224,9 +224,7 @@ export default function App() {
             {/* Brand */}
             <div className="max-w-[280px]">
               <div className="flex items-center gap-2.5">
-                <div className="w-[22px] h-[22px] rounded-[5px] flex items-center justify-center" style={{ background: "var(--text-strong)" }}>
-                  <span className="font-mono text-[11px] font-bold tracking-tighter" style={{ color: "var(--bg)" }}>›_</span>
-                </div>
+                <img src="/logo.png" alt="typecheck logo" width={22} height={22} className="w-[22px] h-[22px] rounded-[5px] object-cover" />
                 <span className="text-[14px] font-semibold tracking-tight" style={{ color: "var(--text-strong)" }}>typecheck</span>
               </div>
               <p className="text-[12px] mt-3 leading-relaxed" style={{ color: "var(--text-dim)" }}>

@@ -72,10 +72,8 @@ export function Header({ onLogoClick, activeView, onViewChange, onTour, onProfil
       <div className="max-w-[1200px] mx-auto px-4 h-[44px] flex items-center justify-between gap-3">
         {/* Left — logo + nav + best WPM */}
         <div className="flex items-center gap-4 min-w-0">
-          <button onClick={onLogoClick} className="flex items-center gap-2 shrink-0">
-            <div className="w-[20px] h-[20px] rounded-[4px] flex items-center justify-center" style={{ background: "var(--text-strong)" }}>
-              <span className="font-mono text-[10px] font-bold" style={{ color: "var(--bg)" }}>›_</span>
-            </div>
+          <button onClick={onLogoClick} className="flex items-center gap-2 shrink-0" aria-label="typecheck home">
+            <img src="/logo.png" alt="typecheck logo" width={20} height={20} className="w-[20px] h-[20px] rounded-[4px] object-cover" />
             <span className="text-[13px] font-semibold tracking-tight hidden sm:inline" style={{ color: "var(--text-strong)" }}>typecheck</span>
           </button>
 

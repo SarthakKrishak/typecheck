@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.svg", "sounds/*.wav"],
+      includeAssets: ["favicon.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png", "logo.png", "sounds/*.wav"],
       manifest: {
         name: "Typecheck - Free Online Typing Test",
         short_name: "Typecheck",
@@ -18,7 +18,8 @@ export default defineConfig({
         display: "standalone",
         start_url: "/",
         icons: [
-          { src: "/favicon.svg", sizes: "any", type: "image/svg+xml", purpose: "any maskable" },
+          { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
         ],
       },
       workbox: {

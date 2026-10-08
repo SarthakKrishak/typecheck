@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#19191B"/>
-  <rect width="64" height="64" rx="14" fill="none" stroke="#2E2E32" stroke-width="1.5"/>
-  <text x="14" y="42" font-family="'Geist Mono','JetBrains Mono',monospace" font-size="26" font-weight="700" fill="#EDEEF0">›</text>
-  <rect x="28" y="40" width="20" height="3.5" rx="1.75" fill="#5E6AD2"/>
-</svg>
